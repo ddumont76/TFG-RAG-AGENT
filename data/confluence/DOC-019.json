@@ -1,0 +1,6 @@
+{
+  "id": "DOC-019",
+  "title": "Prácticas recomendadas para carga incremental en Redshift desde S3 (edición 19)",
+  "content": "Incluye metodología de staging + merge, control de versiones y validación de datos. Se cubre uso de COPY con manifest, sortkeys, distkeys, y vacuum/analyze. Diagnóstico de throttling y WLM.",
+  "created_at": "2026-03-26T13:04:08.155418Z"
+}

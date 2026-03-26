@@ -1,0 +1,212 @@
+components:
+  schemas:
+    HTTPValidationError:
+      properties:
+        detail:
+          items:
+            $ref: '#/components/schemas/ValidationError'
+          title: Detail
+          type: array
+      title: HTTPValidationError
+      type: object
+    QueryRequest:
+      properties:
+        query:
+          title: Query
+          type: string
+        top_k:
+          default: 5
+          title: Top K
+          type: integer
+      required:
+      - query
+      title: QueryRequest
+      type: object
+    QueryResponse:
+      properties:
+        answer:
+          title: Answer
+          type: string
+        docs:
+          items:
+            additionalProperties: true
+            type: object
+          title: Docs
+          type: array
+        query:
+          title: Query
+          type: string
+        tickets:
+          items:
+            additionalProperties: true
+            type: object
+          title: Tickets
+          type: array
+      required:
+      - query
+      - tickets
+      - docs
+      - answer
+      title: QueryResponse
+      type: object
+    ValidationError:
+      properties:
+        ctx:
+          title: Context
+          type: object
+        input:
+          title: Input
+        loc:
+          items:
+            anyOf:
+            - type: string
+            - type: integer
+          title: Location
+          type: array
+        msg:
+          title: Message
+          type: string
+        type:
+          title: Error Type
+          type: string
+      required:
+      - loc
+      - msg
+      - type
+      title: ValidationError
+      type: object
+info:
+  description: API for Data & IA RAG Agent
+  title: RAG Agent API
+  version: 1.0.0
+openapi: 3.1.0
+paths:
+  /ask:
+    get:
+      description: Endpoint alternativo para consultas RAG via GET con parámetros
+        de query.
+      operationId: ask_query_ask_get
+      parameters:
+      - in: query
+        name: query
+        required: true
+        schema:
+          title: Query
+          type: string
+      - in: query
+        name: top_k
+        required: false
+        schema:
+          default: 5
+          title: Top K
+          type: integer
+      responses:
+        '200':
+          content:
+            application/json:
+              schema: {}
+          description: Successful Response
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+          description: Validation Error
+      summary: Ask Query
+  /health:
+    get:
+      description: Endpoint de verificación de salud.
+      operationId: health_check_health_get
+      responses:
+        '200':
+          content:
+            application/json:
+              schema: {}
+          description: Successful Response
+      summary: Health Check
+  /query:
+    post:
+      description: Endpoint principal para consultas RAG.
+      operationId: query_rag_query_post
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/QueryRequest'
+        required: true
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/QueryResponse'
+          description: Successful Response
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+          description: Validation Error
+      summary: Query Rag
+  /search/docs:
+    get:
+      description: Buscar únicamente en documentos.
+      operationId: search_docs_search_docs_get
+      parameters:
+      - in: query
+        name: query
+        required: true
+        schema:
+          title: Query
+          type: string
+      - in: query
+        name: top_k
+        required: false
+        schema:
+          default: 5
+          title: Top K
+          type: integer
+      responses:
+        '200':
+          content:
+            application/json:
+              schema: {}
+          description: Successful Response
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+          description: Validation Error
+      summary: Search Docs
+  /search/tickets:
+    get:
+      description: Buscar únicamente en tickets.
+      operationId: search_tickets_search_tickets_get
+      parameters:
+      - in: query
+        name: query
+        required: true
+        schema:
+          title: Query
+          type: string
+      - in: query
+        name: top_k
+        required: false
+        schema:
+          default: 5
+          title: Top K
+          type: integer
+      responses:
+        '200':
+          content:
+            application/json:
+              schema: {}
+          description: Successful Response
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+          description: Validation Error
+      summary: Search Tickets

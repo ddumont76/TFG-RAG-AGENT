@@ -1,0 +1,16 @@
+{
+  "id": "TCK-028",
+  "summary": "Data lake ingestion falla en S3 con errores de permisos (instancia 28)",
+  "description": "Los jobs de Glue no pueden escribir en el bucket s3://prod-datalake por error AccessDenied. Impacta dashboards de Power BI y pipelines de ML.",
+  "steps": [
+    "Revisar policy de S3 en prod-datalake",
+    "Asegurar sts:AssumeRole para el role glue_execution",
+    "Probar creación de objeto de prueba"
+  ],
+  "comments": [
+    "Se sospecha cambio de RW en el bucket por equipo de seguridad.",
+    "Aplica hotfix con policy temporal."
+  ],
+  "created_at": "2026-03-26T13:04:08.144345Z",
+  "status": "resolved"
+}

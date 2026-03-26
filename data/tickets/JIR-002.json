@@ -1,0 +1,9 @@
+{
+    "id": "JIR-002",
+    "summary": "Problema al desplegar en Kubernetes",
+    "description": "El despliegue se queda en estado CrashLoopBackOff después de actualizar la imagen.",
+    "comments": [
+        "Ver logs del contenedor.",
+        "Posible fallo en variables de entorno."
+    ]
+}

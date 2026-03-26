@@ -1,0 +1,9 @@
+{
+  "id": "JIR-001",
+  "summary": "Error en pipeline de Jenkins",
+  "description": "El job falla al intentar descargar dependencias Maven. Error: 403 forbidden.",
+  "comments": [
+    "Puede ser problema de credenciales.",
+    "Revisar configuración en settings.xml."
+  ]
+}

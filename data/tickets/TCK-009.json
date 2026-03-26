@@ -1,0 +1,15 @@
+{
+  "id": "TCK-009",
+  "summary": "Carga incremental en Redshift desde datalake se ralentiza por filas duplicadas (instancia 9)",
+  "description": "ETL incremental diseñado con COPY en Redshift está tardando 6h en lugar de 30 min. Identificado scan masivo en tabla staging por duplicates de UUID.",
+  "steps": [
+    "Analizar estrategia de merge (upsert) y batch_size",
+    "Crear CTE para dedupe antes de COPY",
+    "Ajustar WLM en Redshift para pobres queries"
+  ],
+  "comments": [
+    "Por ahora se ejecuta workaround con pre-filtering de parquet."
+  ],
+  "created_at": "2026-03-26T13:04:08.133977Z",
+  "status": "open"
+}

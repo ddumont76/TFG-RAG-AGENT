@@ -1,0 +1,4 @@
+Traceback (most recent call last):
+  File "C:\Users\deborah.dumontgonzal\work\tfg-rag-agent\app\ingest\create_embeddings.py", line 7, in <module>
+    from app.ingest.load_corpus import load_tickets, load_confluence_docs
+ModuleNotFoundError: No module named 'app'

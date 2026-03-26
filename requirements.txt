@@ -1,0 +1,13 @@
+chromadb
+langchain
+langchain-community
+python-multipart
+jinja2
+sentence-transformers
+pydantic
+fastapi
+uvicorn[standard]
+transformers
+torch
+accelerate
+bitsandbytes

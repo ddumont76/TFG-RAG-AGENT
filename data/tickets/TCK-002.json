@@ -1,0 +1,15 @@
+{
+  "id": "TCK-002",
+  "summary": "Fallo de linaje en Glue catalogo -> no se muestra en DataOps (instancia 2)",
+  "description": "No se visualizan los activos en la herramienta de linaje. Registro de AWS Glue no incluye registros de eventos de ETL recientes.",
+  "steps": [
+    "Validar AWS Glue catalogo y endpoints Glue Data Catalog",
+    "Revisar IAM role con permisos glue:BatchGetPartition, glue:GetTable",
+    "Reconstruir metadatos en AWS Glue y refrescar DataOps"
+  ],
+  "comments": [
+    "Posible patch de versión de Glue corredor."
+  ],
+  "created_at": "2026-03-26T13:04:08.128880Z",
+  "status": "open"
+}

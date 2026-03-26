@@ -1,0 +1,5 @@
+{
+  "id": "DOC-001",
+  "title": "Guía de resolución de errores en Jenkins",
+  "content": "Para errores 403 en Jenkins revisa credenciales, revisa el settings.xml y valida permisos en el repositorio remoto."
+}

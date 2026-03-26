@@ -1,0 +1,5 @@
+{
+  "id": "DOC-002",
+  "title": "Solución a errores CrashLoopBackOff",
+  "content": "CrashLoopBackOff ocurre cuando un contenedor arranca y termina repetidamente. Revisa logs, variables de entorno y health checks."
+}

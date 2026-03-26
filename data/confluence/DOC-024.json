@@ -1,0 +1,6 @@
+{
+  "id": "DOC-024",
+  "title": "Checklist de monitoreo de Data Lake AWS (S3 / Glue / Lake Formation) (edición 24)",
+  "content": "Métricas clave: licz buckets, request errors, glue job duration, y registros de auditoría. Establece alertas en CloudWatch para registros de ETL fallidos, y reporte semanal de integridad de linaje.",
+  "created_at": "2026-03-26T13:04:08.158021Z"
+}
