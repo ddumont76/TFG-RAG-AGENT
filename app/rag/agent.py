@@ -42,7 +42,7 @@ class RAGAgent:
         self.llm = LLMConfig.get_model(model_name, use_local)
         print(f"🤖 Agente RAG inicializado con modelo: {model_name}")
 
-    def _prepare_context(self, tickets: List[Dict], docs: List[Dict], max_length: int = 2000) -> Dict[str, str]:
+    def _prepare_context(self, tickets: List[Dict], docs: List[Dict], max_length: int = 3000) -> Dict[str, str]:
         """
         Prepara el contexto de tickets y documentos para el LLM.
 
@@ -54,17 +54,35 @@ class RAGAgent:
         Returns:
             Diccionario con contexto de tickets y docs
         """
-        # Preparar contexto de tickets
+        # Preparar contexto de tickets con información completa
         tickets_context = ""
-        for i, ticket in enumerate(tickets[:3], 1):  # Máximo 3 tickets
-            content = ticket.get("content", "")
-            tickets_context += f"\n{i}. Ticket {ticket.get('id', 'N/A')}: {content[:300]}..."
+        if tickets:
+            tickets_context = "\n=== TICKETS RELACIONADOS ==="
+            for i, ticket in enumerate(tickets[:5], 1):  # Máximo 5 tickets
+                ticket_id = ticket.get('id', 'N/A')
+                summary = ticket.get('summary', 'N/A')
+                description = ticket.get('description', '')
+                comments = ticket.get('comments', [])
+                
+                tickets_context += f"\n\n{i}. **Ticket ID: {ticket_id}**"
+                tickets_context += f"\n   **Summary**: {summary}"
+                if description:
+                    tickets_context += f"\n   **Description**: {description[:200]}..."
+                if comments:
+                    tickets_context += f"\n   **Comments**: {'; '.join(comments)[:200]}..."
 
-        # Preparar contexto de documentos
+        # Preparar contexto de documentos con información completa
         docs_context = ""
-        for i, doc in enumerate(docs[:3], 1):  # Máximo 3 docs
-            content = doc.get("content", "")
-            docs_context += f"\n{i}. Doc {doc.get('id', 'N/A')}: {content[:300]}..."
+        if docs:
+            docs_context = "\n=== DOCUMENTOS DE CONFLUENCE ==="
+            for i, doc in enumerate(docs[:5], 1):  # Máximo 5 docs
+                doc_id = doc.get('id', 'N/A')
+                title = doc.get('title', 'N/A')
+                content = doc.get('content', '')
+                
+                docs_context += f"\n\n{i}. **Documento ID: {doc_id}**"
+                docs_context += f"\n   **Title**: {title}"
+                docs_context += f"\n   **Content**: {content[:400]}..."
 
         # Limitar longitud total
         total_context = tickets_context + docs_context

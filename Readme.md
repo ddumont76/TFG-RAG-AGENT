@@ -1,4 +1,7 @@
-ESTRUCTURA DE CARPETAS
+
+###################################
+## PASO 1 ESTRUCTURA DE CARPETAS ##
+###################################
 
 tfg-rag-agent/
 │── data/
@@ -18,9 +21,9 @@ app/ingest/ → scripts para cargar datos y generar embeddings.
 app/rag/ → pipeline de búsqueda y recuperación.
 app/api/ → FastAPI con endpoints REST.
 
-################################
-##PASO 2 Crear entorno virtual##
-################################
+##################################
+## PASO 2 Crear entorno virtual ##
+##################################
 WINDOWS:
 
 python -m venv venv
@@ -88,9 +91,30 @@ Realiza una consulta RAG completa (tickets + docs + respuesta generada).
 ```json
 {
   "query": "problemas con S3",
-  "tickets": [...],
-  "docs": [...],
-  "answer": "Respuesta generada..."
+  "answer": "**Análisis del problema**: Se encontraron varios tickets relacionados con errores de permisos en S3...\n\n**Tickets relacionados encontrados**:\n1. **Ticket ID: TCK-001** - Summary: Data lake ingestion falla en S3 con errores de permisos\n2. **Ticket ID: TCK-007** - Summary: Jobs de Glue no pueden escribir en bucket S3\n\n**Posibles soluciones de documentos**:\n1. **Documento ID: DOC-005** - Title: Guía de resolución de errores de acceso S3\n   Content: Se describe: roles IAM, políticas de bucket, configuración de Glue...\n\n**Recomendación final**: Revisar roles IAM y políticas de bucket S3...",
+  "tickets": [
+    {
+      "id": "TCK-001",
+      "summary": "Data lake ingestion falla en S3 con errores de permisos",
+      "description": "Los jobs de Glue no pueden escribir...",
+      "comments": ["Se sospecha cambio de RW"],
+      "content": "Data lake ingestion falla en S3...",
+      "score": 0.85
+    }
+  ],
+  "docs": [
+    {
+      "id": "DOC-005", 
+      "title": "Guía de resolución de errores de acceso S3 en pipelines Glue",
+      "content": "Se describe: roles IAM, políticas...",
+      "score": 0.78
+    }
+  ],
+  "model_name": "mistral",
+  "processing_time": 2.34,
+  "total_sources": 6,
+  "confidence_score": 0.87,
+  "metadata": {...}
 }
 ```
 
@@ -106,8 +130,17 @@ Buscar únicamente en tickets.
 ```json
 {
   "query": "problemas con S3",
-  "tickets": [...],
-  "count": 3
+  "tickets": [
+    {
+      "id": "TCK-001",
+      "summary": "Data lake ingestion falla en S3 con errores de permisos",
+      "description": "Los jobs de Glue no pueden escribir en el bucket...",
+      "comments": ["Se sospecha cambio de RW en el bucket"],
+      "content": "Data lake ingestion falla en S3...",
+      "score": 0.85
+    }
+  ],
+  "count": 1
 }
 ```
 
@@ -118,11 +151,52 @@ Buscar únicamente en documentos de Confluence.
 ```json
 {
   "query": "problemas con S3", 
-  "docs": [...],
-  "count": 3
+  "docs": [
+    {
+      "id": "DOC-005",
+      "title": "Guía de resolución de errores de acceso S3 en pipelines Glue",
+      "content": "Se describe: roles IAM, políticas de bucket...",
+      "score": 0.78
+    }
+  ],
+  "count": 1
 }
 ```
-venv\Scripts\python.exe -c "import chromadb, sentence_transformers; print('ok')" → imprimió ok
+
+### POST /evaluate
+Evalúa la calidad de una respuesta RAG usando métricas RAGAS.
+
+**Métricas calculadas:**
+- **Faithfulness**: Fidelidad de la respuesta a los documentos recuperados (0-1)
+- **Answer Relevancy**: Relevancia de la respuesta a la consulta original (0-1)
+- **Context Precision**: Precisión de documentos recuperados (0-1)
+- **Context Recall**: Recall de documentos relevantes (0-1)
+
+**Request Body:**
+```json
+{
+  "query": "¿Cómo resolver errores 403 en Jenkins?",
+  "answer": "Los errores 403 en Jenkins ocurren cuando hay problemas de credenciales...",
+  "contexts": ["Documento 1 relevante", "Documento 2 relevante"],
+  "ground_truth": "Respuesta esperada (opcional)"
+}
+```
+
+**Response:**
+```json
+{
+  "query": "¿Cómo resolver errores 403 en Jenkins?",
+  "answer": "Los errores 403 en Jenkins ocurren...",
+  "metrics": {
+    "faithfulness": 0.85,
+    "answer_relevancy": 0.92,
+    "context_precision": 0.88,
+    "context_recall": 0.80
+  },
+  "avg_score": 0.8625,
+  "metric_descriptions": {...}
+}
+```
 
 
 #################################################
@@ -310,6 +384,57 @@ Estos archivos contienen la documentación completa de la API y pueden ser utili
 - Generar clientes SDK automáticamente
 - Documentación offline
 - Integración con gateways API
+
+
+################################################################
+## PASO 9.5 Evaluación RAGAS - Métricas de Calidad ##
+################################################################
+
+Instalamos RAGAS para evaluar la calidad del sistema RAG:
+
+```bash
+pip install ragas
+```
+
+Archivos creados:
+- app/rag/evaluation.py - Módulo de evaluación RAGAS
+- evaluate_rag.py - Script para evaluación batch
+
+**Métricas disponibles:**
+
+1. **Faithfulness**: ¿Qué tan fiel es la respuesta a los documentos? (0-1)
+2. **Answer Relevancy**: ¿Qué tan relevante es la respuesta a la consulta? (0-1)
+3. **Context Precision**: ¿Qué proporción de documentos son relevantes? (0-1)
+4. **Context Recall**: ¿Qué proporción de documentos relevantes fueron recuperados? (0-1)
+
+**Uso via API:**
+
+```bash
+curl -X POST http://localhost:8000/evaluate \
+  -H "Content-Type: application/json" \
+  -d '{
+    "query": "¿Cómo resolver errores 403 en Jenkins?",
+    "answer": "Los errores 403 ocurren por problemas de credenciales...",
+    "contexts": ["Documento 1", "Documento 2"],
+    "ground_truth": "Respuesta esperada (opcional)"
+  }'
+```
+
+**Evaluación batch (script):**
+
+```bash
+venv\Scripts\python.exe evaluate_rag.py
+```
+
+Genera reporte en `evaluation_report.json` con:
+- Puntuaciones de cada métrica
+- Score promedio del sistema
+- Detalles de consultas evaluadas
+
+**Interpretación de resultados:**
+- Score >= 0.8: Excelente calidad
+- Score 0.6-0.8: Buena calidad (puede mejorar)
+- Score < 0.6: Baja calidad (requiere mejoras)
 
 
 ################################################################
