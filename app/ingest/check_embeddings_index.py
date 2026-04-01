@@ -48,7 +48,7 @@ def main():
         try:
             collection = client.get_collection(collection_name)
             results = collection.query(query_embeddings=[q_embedding], n_results=3)
-            docs_out = results.get("documents", [[]])[0]
+            docs_out = (results.get("documents") or [[]])[0]
             print(f"\nTop matches in '{collection_name}':")
             if not docs_out:
                 print("  (no documents found)")

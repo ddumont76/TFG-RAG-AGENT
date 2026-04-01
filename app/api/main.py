@@ -4,14 +4,14 @@ import chromadb
 import os
 from sentence_transformers import SentenceTransformer
 from typing import List, Dict, Any
-
-
 from fastapi.responses import HTMLResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 
 from app.ingest.load_corpus import load_tickets, load_confluence_docs
 from app.rag.agent import RAGAgent
+from app.rag.evaluation import RAGEvaluator
+from app.ingest.chunking_strategies import ChunkingFactory, compare_chunking_strategies
 
 # Variables globales para cache de datos (cargadas de forma lazy)
 TICKETS_DATA = None
@@ -167,6 +167,25 @@ class EvaluationResponse(BaseModel):
     metric_descriptions: Dict[str, Dict[str, str]]
 
 
+class ChunkingCompareRequest(BaseModel):
+    text: str
+    strategies: List[str] = ["fixed_size", "fixed_size_overlap", "sentence", "paragraph"]
+
+
+class ChunkingCompareResponse(BaseModel):
+    results: Dict[str, Dict[str, Any]]
+    comparison: Dict[str, Any]
+
+
+class QueryWithChunkingRequest(BaseModel):
+    query: str
+    top_k: int = 2
+    provider: str = "mock"
+    model: str = "mistral"
+    chunking_strategy: str = "fixed_size"
+    chunk_size: int = 512
+
+
 def retrieve_documents(query: str, top_k: int = 5):
     query_embedding = embedding_model.encode(query).tolist()
 
@@ -208,7 +227,7 @@ async def query_rag(request: QueryRequest):
         confidence = min((len(enriched_tickets) + len(enriched_docs)) * 0.1, 1.0)
 
         # Calcular métricas básicas
-        metrics = {
+        basic_metrics = {
             "tickets_found": len(enriched_tickets),
             "docs_found": len(enriched_docs),
             "total_sources": len(enriched_tickets) + len(enriched_docs),
@@ -216,6 +235,43 @@ async def query_rag(request: QueryRequest):
             "avg_doc_score": sum(d.get("score", 0) for d in enriched_docs) / len(enriched_docs) if enriched_docs else 0,
             "processing_time": 0.1  # Placeholder, se puede medir real
         }
+
+        # Calcular métricas RAGAS de evaluación
+        ragas_metrics = {}
+        try:
+            # Extraer contextos como lista de strings
+            contexts = []
+            for ticket in enriched_tickets:
+                contexts.append(ticket.get("content", ""))
+            for doc in enriched_docs:
+                contexts.append(doc.get("content", ""))
+            
+            if answer and contexts:
+                evaluator = RAGEvaluator()
+                evaluation_results = evaluator.evaluate_single_query(
+                    query=request.query,
+                    answer=answer,
+                    contexts=contexts
+                )
+                ragas_metrics = evaluation_results.get("metrics", {})
+        except Exception as e:
+            print(f"Advertencia: No se pudieron calcular métricas RAGAS: {e}")
+        
+        # Combinar métricas básicas y RAGAS
+        metrics = {**basic_metrics, **ragas_metrics}
+
+        # Crear metadata con información detallada de evaluación
+        ragas_metadata = {}
+        if ragas_metrics:
+            ragas_metadata = {
+                "ragas_evaluation": {
+                    "faithfulness": ragas_metrics.get("faithfulness", "N/A"),
+                    "answer_relevancy": ragas_metrics.get("answer_relevancy", "N/A"),
+                    "context_precision": ragas_metrics.get("context_precision", "N/A"),
+                    "context_recall": ragas_metrics.get("context_recall", "N/A"),
+                    "note": "Métricas de evaluación RAGAS calculadas automáticamente"
+                }
+            }
 
         return QueryResponse(
             query=request.query,
@@ -226,7 +282,12 @@ async def query_rag(request: QueryRequest):
             processing_time=metrics["processing_time"],
             total_sources=metrics["total_sources"],
             confidence_score=confidence,
-            metadata={"rag_agent_available": current_rag_agent is not None, "provider": request.provider, "model": request.model},
+            metadata={
+                "rag_agent_available": current_rag_agent is not None,
+                "provider": request.provider,
+                "model": request.model,
+                **ragas_metadata
+            },
             metrics=metrics
         )
 
@@ -357,6 +418,71 @@ async def evaluate_response(request: EvaluationRequest):
     
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error evaluando respuesta: {str(e)}")
+
+@app.get("/chunking-strategies")
+async def get_chunking_strategies():
+    """Devuelve las estrategias de chunking disponibles."""
+    try:
+        strategies = ChunkingFactory.get_available_strategies()
+        return {
+            "available_strategies": strategies,
+            "count": len(strategies)
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error obteniendo estrategias: {str(e)}")
+
+
+@app.post("/compare-chunking", response_model=ChunkingCompareResponse)
+async def compare_chunking(request: ChunkingCompareRequest):
+    """Compara múltiples estrategias de chunking."""
+    try:
+        results = compare_chunking_strategies(request.text, request.strategies)
+        
+        # Crear comparación
+        if results:
+            num_chunks_list = [r.get("num_chunks", 0) for r in results.values() if "error" not in r]
+            avg_sizes = [r.get("avg_chunk_size", 0) for r in results.values() if "error" not in r]
+            
+            comparison = {
+                "best_strategy_for_chunks": min(
+                    ((k, v["num_chunks"]) for k, v in results.items() if "error" not in v),
+                    key=lambda x: x[1],
+                    default=(None, 0)
+                )[0],
+                "best_strategy_for_avg_size": min(
+                    ((k, v["avg_chunk_size"]) for k, v in results.items() if "error" not in v),
+                    key=lambda x: x[1],
+                    default=(None, 0)
+                )[0],
+                "min_chunks": min(num_chunks_list) if num_chunks_list else 0,
+                "max_chunks": max(num_chunks_list) if num_chunks_list else 0,
+                "avg_chunks": sum(num_chunks_list) / len(num_chunks_list) if num_chunks_list else 0,
+            }
+        else:
+            comparison = {}
+        
+        return ChunkingCompareResponse(results=results, comparison=comparison)
+    
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error comparando chunking: {str(e)}")
+
+
+@app.post("/query-with-chunking", response_model=QueryResponse)
+async def query_with_chunking(request: QueryWithChunkingRequest):
+    """Ejecuta consulta RAG con estrategia de chunking específica."""
+    try:
+        # Por ahora, reutilizamos el endpoint /query
+        # En el futuro, aquí aplicaríamos la estrategia de chunking seleccionada
+        base_request = QueryRequest(
+            query=request.query,
+            top_k=request.top_k,
+            provider=request.provider,
+            model=request.model
+        )
+        return await query_rag(base_request)
+    
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error en consulta con chunking: {str(e)}")
 
 @app.get("/", response_class=HTMLResponse)
 async def home(request: Request):

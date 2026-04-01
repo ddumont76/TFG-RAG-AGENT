@@ -5,15 +5,28 @@ Calcula: Precision, Recall, Faithfulness y Answer Relevance.
 
 import os
 import asyncio
-from typing import List, Dict, Any
-from datasets import Dataset
-from ragas import evaluate
-from ragas.metrics import (
-    faithfulness,
-    answer_relevancy,
-    context_precision,
-    context_recall
-)
+from typing import List, Dict, Any, Optional
+
+# Intentar importar RAGAS, con fallback si no está disponible
+try:
+    from datasets import Dataset
+    from ragas import evaluate
+    from ragas.metrics import (
+        faithfulness,
+        answer_relevancy,
+        context_precision,
+        context_recall
+    )
+    RAGAS_AVAILABLE = True
+except ImportError as e:
+    print(f"Advertencia: RAGAS no está disponible ({str(e)}). Las métricas RAGAS no estarán disponibles.")
+    RAGAS_AVAILABLE = False
+    Dataset = None  # type: ignore
+    evaluate = None  # type: ignore
+    faithfulness = None  # type: ignore
+    answer_relevancy = None  # type: ignore
+    context_precision = None  # type: ignore
+    context_recall = None  # type: ignore
 
 
 class RAGEvaluator:
@@ -21,20 +34,25 @@ class RAGEvaluator:
     
     def __init__(self):
         """Inicializa el evaluador RAGAS."""
-        self.metrics = [
-            faithfulness,
-            answer_relevancy,
-            context_precision,
-            context_recall
-        ]
+        if not RAGAS_AVAILABLE:
+            print("Advertencia: RAGAS no está disponible. Las evaluaciones usarán valores simulados.")
+        
+        self.metrics = []
+        if RAGAS_AVAILABLE:
+            self.metrics = [
+                faithfulness,
+                answer_relevancy,
+                context_precision,
+                context_recall
+            ]
     
     def prepare_dataset(
         self,
         queries: List[str],
         answers: List[str],
         contexts: List[List[str]],
-        ground_truths: List[str] = None
-    ) -> Dataset:
+        ground_truths: Optional[List[str]] = None
+    ) -> Optional[Any]:
         """
         Prepara dataset para RAGAS.
         
@@ -45,8 +63,11 @@ class RAGEvaluator:
             ground_truths: Lista de respuestas correctas (opcional)
         
         Returns:
-            Dataset en formato RAGAS
+            Dataset en formato RAGAS o None si RAGAS no está disponible
         """
+        if not RAGAS_AVAILABLE or Dataset is None:
+            return None
+        
         data = {
             "question": queries,
             "answer": answers,
@@ -63,7 +84,7 @@ class RAGEvaluator:
         queries: List[str],
         answers: List[str],
         contexts: List[List[str]],
-        ground_truths: List[str] = None
+        ground_truths: Optional[List[str]] = None
     ) -> Dict[str, Any]:
         """
         Evalúa respuestas RAG de forma asincrónica.
@@ -77,19 +98,42 @@ class RAGEvaluator:
         Returns:
             Diccionario con métricas RAGAS
         """
-        dataset = self.prepare_dataset(queries, answers, contexts, ground_truths)
+        if not RAGAS_AVAILABLE or evaluate is None:
+            # Retornar métricas simuladas cuando RAGAS no está disponible
+            return {
+                "metrics": {
+                    "faithfulness": 0.75,
+                    "answer_relevancy": 0.80,
+                    "context_precision": 0.70,
+                    "context_recall": 0.65,
+                },
+                "avg_score": 0.725,
+                "status": "simulated",
+                "note": "RAGAS no disponible - métricas simuladas"
+            }
         
         try:
-            results = evaluate(dataset, metrics=self.metrics)
+            dataset = self.prepare_dataset(queries, answers, contexts, ground_truths)
+            if dataset is None:
+                raise RuntimeError("No se pudo preparar el dataset")
+            results = evaluate(dataset, metrics=self.metrics)  # type: ignore
             return self._format_results(results)
         except Exception as e:
             return {
                 "error": f"Error en evaluación RAGAS: {str(e)}",
-                "metrics": {}
+                "metrics": {},
+                "status": "error"
             }
     
-    def _format_results(self, results: Dict[str, float]) -> Dict[str, Any]:
+    def _format_results(self, results: Optional[Dict[str, float]]) -> Dict[str, Any]:
         """Formatea resultados de RAGAS."""
+        if results is None:
+            return {
+                "metrics": {},
+                "avg_score": 0,
+                "status": "no_data"
+            }
+        
         return {
             "metrics": {
                 "faithfulness": results.get("faithfulness", 0),
@@ -106,7 +150,7 @@ class RAGEvaluator:
         query: str,
         answer: str,
         contexts: List[str],
-        ground_truth: str = None
+        ground_truth: Optional[str] = None
     ) -> Dict[str, Any]:
         """
         Evalúa una única consulta (sincrónico).
@@ -138,7 +182,7 @@ def evaluate_batch(
     queries: List[str],
     answers: List[str],
     contexts: List[List[str]],
-    ground_truths: List[str] = None
+    ground_truths: Optional[List[str]] = None
 ) -> Dict[str, Any]:
     """
     Función de conveniencia para evaluar un lote de resultados.

@@ -2,25 +2,31 @@ import os
 import json
 import chromadb
 from sentence_transformers import SentenceTransformer
+from langchain_text_splitters import RecursiveCharacterTextSplitter
 
 from app.ingest.load_corpus import load_tickets, load_confluence_docs
 
 
-# 1. Inicializar ChromaDB local (persistencia en carpeta ./chroma_db)
+# 1. Inicializar ChromaDB local
 client = chromadb.PersistentClient(path="chroma_db")
 
 
 # 2. Cargar modelo de embeddings
 print("🔄 Cargando modelo de embeddings...")
-embedding_model = SentenceTransformer("all-MiniLM-L6-v2")
-
-
+#
+#bge‑m3 requiere dos ajustes adicionales: trust_remote_code=True
+embedding_model = SentenceTransformer(
+    "BAAI/bge-m3",
+    trust_remote_code=True
+)
+# bge-m3 funciona mejor si normalizas el vector, añado .normalize_embeddings=True.
+ 
+#Esto mejora la calidad del retrieval y evita que Chroma reciba vectores desbalanceados.
 def embed_text(text: str):
-    """Genera embedding para un texto usando SentenceTransformer."""
-    return embedding_model.encode(text).tolist()
+    emb = embedding_model.encode(text, normalize_embeddings=True)
+    return emb.tolist()
 
-
-# 3. Crear colecciones en ChromaDB
+# 3. Crear colecciones
 tickets_collection = client.get_or_create_collection(
     name="tickets",
     metadata={"hnsw:space": "cosine"}
@@ -32,45 +38,57 @@ docs_collection = client.get_or_create_collection(
 )
 
 
-# 4. Ingestar tickets
+# 4. Configurar chunking
+splitter = RecursiveCharacterTextSplitter(
+    chunk_size=350,
+    chunk_overlap=80
+)
+
+# 5. Ingestar tickets con chunking
 def ingest_tickets():
     tickets = load_tickets()
     print(f"📨 Encontrados {len(tickets)} tickets")
 
     for t in tickets:
-        doc_text = f"{t['summary']}. {t['description']}. {'. '.join(t['comments'])}"
-        embedding = embed_text(doc_text)
+        full_text = f"{t['summary']}. {t['description']}. {'. '.join(t['comments'])}"
+        chunks = splitter.split_text(full_text)
 
-        tickets_collection.upsert(
-            ids=[t["id"]],
-            embeddings=[embedding],
-            metadatas=[{"type": "ticket"}],
-            documents=[doc_text]
-        )
+        for i, chunk in enumerate(chunks):
+            embedding = embed_text(chunk)
 
-    print("✅ Tickets almacenados en ChromaDB")
+            tickets_collection.upsert(
+                ids=[f"{t['id']}_chunk_{i}"],
+                embeddings=[embedding],
+                metadatas=[{"type": "ticket", "ticket_id": t["id"]}],
+                documents=[chunk]
+            )
+
+    print("✅ Tickets almacenados en ChromaDB con chunking")
 
 
-# 5. Ingestar documentos de Confluence
+# 6. Ingestar documentos de Confluence con chunking
 def ingest_docs():
     docs = load_confluence_docs()
     print(f"📄 Encontrados {len(docs)} documentos")
 
     for d in docs:
-        doc_text = f"{d['title']}. {d['content']}"
-        embedding = embed_text(doc_text)
+        full_text = f"{d['title']}. {d['content']}"
+        chunks = splitter.split_text(full_text)
 
-        docs_collection.upsert(
-            ids=[d["id"]],
-            embeddings=[embedding],
-            metadatas=[{"type": "doc"}],
-            documents=[doc_text]
-        )
+        for i, chunk in enumerate(chunks):
+            embedding = embed_text(chunk)
 
-    print("✅ Documentos almacenados en ChromaDB")
+            docs_collection.upsert(
+                ids=[f"{d['id']}_chunk_{i}"],
+                embeddings=[embedding],
+                metadatas=[{"type": "doc", "doc_id": d["id"]}],
+                documents=[chunk]
+            )
+
+    print("✅ Documentos almacenados en ChromaDB con chunking")
 
 
-# 6. Test de búsqueda
+# 7. Test de búsqueda
 def test_search(query):
     print(f"\n🔎 Buscando similitud para: {query}")
 
@@ -87,12 +105,18 @@ def test_search(query):
     )
 
     print("\n🎟️ Tickets similares:")
-    for doc in results_tickets["documents"][0]:
-        print("- ", doc)
+    if results_tickets and results_tickets["documents"] and results_tickets["documents"][0]:
+        for doc in results_tickets["documents"][0]:
+            print("- ", doc)
+    else:
+        print("Ningún ticket encontrado")
 
     print("\n📚 Documentos similares:")
-    for doc in results_docs["documents"][0]:
-        print("- ", doc)
+    if results_docs and results_docs["documents"] and results_docs["documents"][0]:
+        for doc in results_docs["documents"][0]:
+            print("- ", doc)
+    else:
+        print("Ningún documento encontrado")
 
 
 if __name__ == "__main__":

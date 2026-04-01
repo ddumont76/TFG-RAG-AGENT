@@ -3,45 +3,355 @@
 <head>
     <meta charset="UTF-8" />
     <title>Agente RAG – TFG Deborah</title>
-
     <link rel="stylesheet" href="/static/style.css" />
+    <style>
+        .section {
+            margin-top: 20px;
+            padding: 20px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            background-color: #f9f9f9;
+        }
+
+        .form-group {
+            margin-bottom: 15px;
+        }
+
+        label {
+            display: block;
+            font-weight: bold;
+            margin-bottom: 5px;
+            color: #333;
+        }
+
+        textarea, input[type="number"], input[type="text"], select {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-family: inherit;
+            box-sizing: border-box;
+        }
+
+        textarea {
+            min-height: 80px;
+            resize: vertical;
+        }
+
+        .input-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            gap: 15px;
+            margin-bottom: 15px;
+        }
+
+        .input-row > div {
+            flex: 1;
+        }
+
+        .button-group {
+            display: flex;
+            gap: 10px;
+            margin-top: 15px;
+        }
+
+        button {
+            padding: 10px 20px;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: background-color 0.3s;
+        }
+
+        button:hover {
+            background-color: #45a049;
+        }
+
+        button.secondary {
+            background-color: #008CBA;
+        }
+
+        button.secondary:hover {
+            background-color: #007399;
+        }
+
+        .loading {
+            display: none;
+            text-align: center;
+            color: #666;
+            font-style: italic;
+            margin-top: 15px;
+        }
+
+        .loading.show {
+            display: block;
+        }
+
+        .error {
+            background-color: #ffebee;
+            color: #c62828;
+            padding: 15px;
+            border-radius: 4px;
+            margin-top: 15px;
+            display: none;
+            border-left: 4px solid #c62828;
+        }
+
+        .error.show {
+            display: block;
+        }
+
+        .stats-row {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 15px;
+            margin: 20px 0;
+        }
+
+        .stat-card {
+            background: white;
+            padding: 15px;
+            border-radius: 6px;
+            border-left: 4px solid #4CAF50;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            text-align: center;
+        }
+
+        .stat-value {
+            font-size: 28px;
+            font-weight: bold;
+            color: #4CAF50;
+        }
+
+        .stat-label {
+            font-size: 12px;
+            color: #666;
+            text-transform: uppercase;
+            margin-top: 5px;
+        }
+
+        .metrics-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 15px;
+            margin-top: 15px;
+        }
+
+        .metric-card {
+            background: white;
+            padding: 15px;
+            border-radius: 6px;
+            border-left: 4px solid #4CAF50;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .metric-card.low {
+            border-left-color: #f44336;
+        }
+
+        .metric-card.medium {
+            border-left-color: #ff9800;
+        }
+
+        .metric-card.high {
+            border-left-color: #4CAF50;
+        }
+
+        .metric-value {
+            font-size: 24px;
+            font-weight: bold;
+            color: #333;
+        }
+
+        .metric-label {
+            font-size: 12px;
+            color: #666;
+            text-transform: uppercase;
+            margin-top: 5px;
+        }
+
+        .metric-interpretation {
+            font-size: 12px;
+            color: #666;
+            margin-top: 5px;
+            font-style: italic;
+        }
+
+        .response-section {
+            display: none;
+            margin-top: 30px;
+        }
+
+        .response-section.visible {
+            display: block;
+        }
+
+        .result-box {
+            background: white;
+            padding: 15px;
+            border-radius: 6px;
+            border: 1px solid #ddd;
+            margin-top: 15px;
+            overflow-x: auto;
+        }
+
+        .result-box pre {
+            margin: 0;
+            font-size: 12px;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+        }
+
+        h2 {
+            color: #333;
+            margin-top: 30px;
+            margin-bottom: 15px;
+            border-bottom: 2px solid #4CAF50;
+            padding-bottom: 10px;
+        }
+
+        h3 {
+            color: #555;
+            margin-top: 20px;
+            margin-bottom: 10px;
+        }
+    </style>
 </head>
 
 <body>
 
-<h1>🧠 Agente RAG – TFG</h1>
+<h1>🧠 Agente RAG – TFG Deborah</h1>
 
 <div class="container">
-    <label>Introduce tu consulta:</label>
-    <textarea id="query" placeholder="Ejemplo: Error 403 en pipeline Jenkins..."></textarea>
+    <div class="section">
+        <h2>Consulta RAG</h2>
+        
+        <div class="form-group">
+            <label>Introduce tu consulta:</label>
+            <textarea id="query_text" placeholder="Ejemplo: Error 403 en pipeline Jenkins..."></textarea>
+        </div>
 
-    <label>Documentos a recuperar (top_k):</label>
-    <input type="number" id="top_k" value="5" min="1" max="10" />
+        <div class="input-row">
+            <div>
+                <label>Documentos a recuperar (top_k):</label>
+                <input type="number" id="top_k" value="2" min="1" max="3" />
+            </div>
+            <div>
+                <label>Modelo LLM:</label>
+                <select id="llm_option">
+                    <option value="ollama-mistral" selected>Ollama - Mistral</option>
+                    <option value="ollama-phi4">Ollama - Phi-4</option>
+                    <option value="ollama-qwen2.5">Ollama - Qwen-2.5 (3B)</option>
+                    <option value="mock">Mock (sin LLM)</option>
+                </select>
+            </div>
+            <div>
+                <label>Estrategia de Chunking:</label>
+                <select id="chunking_strategy">
+                    <option value="fixed_size" selected>Fixed Size (512 chars)</option>
+                    <option value="fixed_size_overlap">Fixed Size + Overlap</option>
+                    <option value="sentence">Por Oraciones</option>
+                    <option value="paragraph">Por Párrafos</option>
+                </select>
+            </div>
+        </div>
 
-    <label>Proveedor y Modelo LLM:</label>
-    <select id="llm_option">
-        <option value="ollama-mistral" selected>Ollama - Mistral</option>
-        <option value="ollama-phi4">Ollama - Phi-4</option>
-        <option value="ollama-qwen2.5">Ollama - Qwen-2.5 (3B)</option>
-    </select>
+        <div class="button-group">
+            <button onclick="sendQuery()" id="send-btn">Enviar consulta</button>
+            <button class="secondary danger" onclick="cancelQuery()" id="cancel-btn" style="display: none;">⏹️ Cancelar</button>
+            <button class="secondary" onclick="clearResults()">Limpiar resultados</button>
+        </div>
 
-    <button onclick="sendQuery()">Enviar consulta</button>
+        <div class="loading" id="loading">⏳ Procesando consulta...</div>
+        <div class="error" id="error"></div>
 
-    <div id="response-container">
-        <h2>Respuesta del agente:</h2>
-        <pre id="answer"></pre>
+        <!-- ESTADÍSTICAS -->
+        <div class="response-section" id="stats-section">
+            <div class="stats-row">
+                <div class="stat-card">
+                    <div class="stat-value" id="tickets-count">0</div>
+                    <div class="stat-label">🎫 Tickets Encontrados</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value" id="docs-count">0</div>
+                    <div class="stat-label">📄 Documentos Encontrados</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value" id="sources-count">0</div>
+                    <div class="stat-label">📚 Total de Fuentes</div>
+                </div>
+            </div>
+        </div>
 
-        <h3>Tickets usados:</h3>
-        <pre id="tickets"></pre>
+        <!-- RESPUESTA -->
+        <div class="response-section" id="answer-section">
+            <h3>📊 Respuesta del Agente:</h3>
+            <div class="result-box">
+                <pre id="answer">-</pre>
+            </div>
+        </div>
 
-        <h3>Docs usados:</h3>
-        <pre id="docs"></pre>
+        <!-- TICKETS -->
+        <div class="response-section" id="tickets-section">
+            <h3>🎫 Tickets Usados:</h3>
+            <div class="result-box">
+                <pre id="tickets">-</pre>
+            </div>
+        </div>
 
-        <h3>Metadata:</h3>
-        <pre id="meta"></pre>
+        <!-- DOCUMENTOS -->
+        <div class="response-section" id="docs-section">
+            <h3>📄 Documentos Usados:</h3>
+            <div class="result-box">
+                <pre id="docs">-</pre>
+            </div>
+        </div>
 
-        <h3>Métricas:</h3>
-        <pre id="metrics"></pre>
+        <!-- MÉTRICAS RAGAS -->
+        <div class="response-section" id="metrics-section">
+            <h3>📈 Métricas de Evaluación RAGAS:</h3>
+            <div class="metrics-grid" id="ragas-metrics">
+                <div class="metric-card">
+                    <div class="metric-label">Faithfulness</div>
+                    <div class="metric-value" id="faithfulness">-</div>
+                    <div class="metric-interpretation" id="faith-interp"></div>
+                </div>
+                <div class="metric-card">
+                    <div class="metric-label">Answer Relevancy</div>
+                    <div class="metric-value" id="answer_relevancy">-</div>
+                    <div class="metric-interpretation" id="rel-interp"></div>
+                </div>
+                <div class="metric-card">
+                    <div class="metric-label">Context Precision</div>
+                    <div class="metric-value" id="context_precision">-</div>
+                    <div class="metric-interpretation" id="prec-interp"></div>
+                </div>
+                <div class="metric-card">
+                    <div class="metric-label">Context Recall</div>
+                    <div class="metric-value" id="context_recall">-</div>
+                    <div class="metric-interpretation" id="recall-interp"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- METADATA -->
+        <div class="response-section" id="metadata-section">
+            <h3>ℹ️ Metadata:</h3>
+            <div class="result-box">
+                <pre id="meta">-</pre>
+            </div>
+        </div>
+
+        <!-- MÉTRICAS BÁSICAS -->
+        <div class="response-section" id="basic-metrics-section">
+            <h3>📊 Métricas Básicas:</h3>
+            <div class="result-box">
+                <pre id="metrics">-</pre>
+            </div>
+        </div>
     </div>
 </div>
 

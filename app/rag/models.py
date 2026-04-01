@@ -29,7 +29,7 @@ class LLMConfig:
             "temperature": 0.1
         },
         "qwen-2.5": {
-            "ollama_model": "qwen-2.5",
+            "ollama_model": "qwen2.5",  # Llamado como qwen2.5 en Ollama
             "max_tokens": 1024,
             "temperature": 0.1
         }
@@ -63,9 +63,6 @@ class LLMConfig:
 
         if provider in {"mock", "none"}:
             print("[MockLLM] Usando modelo de fallback MockLLM (sin motor real).")
-            return MockLLM()
-
-        raise ValueError(f"Proveedor LLM desconocido: {provider}. Usa 'ollama' o 'mock'.")            print("[MockLLM] Usando modelo de fallback MockLLM (sin motor real).")
             return MockLLM()
 
         raise ValueError(f"Proveedor LLM desconocido: {provider}. Usa 'ollama' o 'mock'.")
