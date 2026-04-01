@@ -18,6 +18,16 @@
     <label>Documentos a recuperar (top_k):</label>
     <input type="number" id="top_k" value="5" min="1" max="10" />
 
+    <label>Proveedor y Modelo LLM:</label>
+    <select id="llm_option">
+        <option value="mock" selected>Mock (sin LLM)</option>
+        <option value="ollama-mistral">Ollama - Mistral</option>
+        <option value="ollama-phi4">Ollama - Phi-4</option>
+        <option value="openai-mistral">OpenAI - GPT-4o (Mistral)</option>
+        <option value="openai-phi4">OpenAI - GPT-4o (Phi-4)</option>
+        <option value="openai-gpt4omini">OpenAI - GPT-4o-mini</option>
+    </select>
+
     <button onclick="sendQuery()">Enviar consulta</button>
 
     <div id="response-container">
@@ -32,6 +42,9 @@
 
         <h3>Metadata:</h3>
         <pre id="meta"></pre>
+
+        <h3>Métricas:</h3>
+        <pre id="metrics"></pre>
     </div>
 </div>
 

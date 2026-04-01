@@ -30,17 +30,20 @@ class RAGAgent:
     Agente RAG que combina búsqueda vectorial con generación de lenguaje.
     """
 
-    def __init__(self, model_name: str = "local_mistral", use_local: bool = True):
+    def __init__(self, model_name: str = "mistral", provider: str | None = None, use_local: bool = True):
         """
         Inicializa el agente RAG.
 
         Args:
-            model_name: Nombre del modelo LLM a usar
-            use_local: Si usar modelo descargado localmente
+            model_name: Nombre del modelo LLM a usar (mistral / phi-4).
+            provider: Proveedor de LLM (ollama / openai / mock).
+            use_local: Si usar modelo local (principalmente para Ollama).
         """
         self.model_name = model_name
-        self.llm = LLMConfig.get_model(model_name, use_local)
-        print(f"🤖 Agente RAG inicializado con modelo: {model_name}")
+        self.provider = provider or os.getenv("LLM_PROVIDER", "ollama")
+        self.use_local = use_local
+        self.llm = LLMConfig.get_model(model_name, provider=self.provider, use_local=use_local)
+        print(f"🤖 Agente RAG inicializado con modelo: {model_name} (provider={self.provider})")
 
     def _prepare_context(self, tickets: List[Dict], docs: List[Dict], max_length: int = 3000) -> Dict[str, str]:
         """

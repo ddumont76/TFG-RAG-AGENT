@@ -1,6 +1,7 @@
 from fastapi import FastAPI, HTTPException, Request
 from pydantic import BaseModel
 import chromadb
+import os
 from sentence_transformers import SentenceTransformer
 from typing import List, Dict, Any
 
@@ -91,16 +92,26 @@ docs_collection = client.get_or_create_collection(name="docs")
 # Agente RAG (inicialización diferida)
 rag_agent = None
 
-def get_rag_agent():
+def get_rag_agent(provider: str = "mock", model: str = "mistral"):
     """Obtiene el agente RAG, inicializándolo si es necesario."""
     global rag_agent
-    if rag_agent is None:
+    print(f"🔍 Solicitando agente con provider={provider}, model={model}")
+    print(f"🔍 Agente actual: {rag_agent.provider if rag_agent else 'None'}, {rag_agent.model_name if rag_agent else 'None'}")
+    
+    if rag_agent is None or rag_agent.provider != provider or rag_agent.model_name != model:
+        print(f"🔄 Reinicializando agente...")
+        provider = provider.strip().lower()
+        model_name = model.strip().lower()
+        use_local = provider == "ollama"
+
         try:
-            rag_agent = RAGAgent(model_name="mistral", use_local=True)
-            print("✅ Agente RAG inicializado correctamente")
+            rag_agent = RAGAgent(model_name=model_name, provider=provider, use_local=use_local)
+            print(f"✅ Agente RAG inicializado correctamente con provider: {provider}, model: {model_name}")
         except Exception as e:
             print(f"⚠️ Error inicializando agente RAG: {e}")
             print("Continuando sin agente RAG - endpoints de búsqueda funcionarán")
+    else:
+        print(f"♻️ Reutilizando agente existente")
     return rag_agent
 
 
@@ -123,6 +134,8 @@ async def health_check():
 class QueryRequest(BaseModel):
     query: str
     top_k: int = 5
+    provider: str = "mock"  # ollama, openai, mock
+    model: str = "mistral"  # mistral, phi-4
 
 
 class QueryResponse(BaseModel):
@@ -135,6 +148,7 @@ class QueryResponse(BaseModel):
     total_sources: int
     confidence_score: float
     metadata: Dict[str, Any]
+    metrics: Dict[str, float] = {}
 
 
 class EvaluationRequest(BaseModel):
@@ -177,29 +191,42 @@ async def query_rag(request: QueryRequest):
         enriched_tickets = enrich_ticket_results(tickets_results)
         enriched_docs = enrich_docs_results(docs_results)
 
-        # Obtener agente RAG (inicialización lazy)
-        current_rag_agent = get_rag_agent()
+        # Obtener agente RAG con el provider y model especificados
+        current_rag_agent = get_rag_agent(request.provider, request.model)
         
         if current_rag_agent is None:
             # Respuesta básica sin LLM
             answer = f"Lo siento, el agente RAG no está disponible. Se encontraron {len(enriched_tickets)} tickets y {len(enriched_docs)} documentos relacionados con: '{request.query}'"
+            model_name = "N/A"
         else:
             rag_result = current_rag_agent.query(request.query, enriched_tickets, enriched_docs)
             answer = rag_result.answer
+            model_name = current_rag_agent.model_name
 
         # Calcular confianza básica
         confidence = min((len(enriched_tickets) + len(enriched_docs)) * 0.1, 1.0)
+
+        # Calcular métricas básicas
+        metrics = {
+            "tickets_found": len(enriched_tickets),
+            "docs_found": len(enriched_docs),
+            "total_sources": len(enriched_tickets) + len(enriched_docs),
+            "avg_ticket_score": sum(t.get("score", 0) for t in enriched_tickets) / len(enriched_tickets) if enriched_tickets else 0,
+            "avg_doc_score": sum(d.get("score", 0) for d in enriched_docs) / len(enriched_docs) if enriched_docs else 0,
+            "processing_time": 0.1  # Placeholder, se puede medir real
+        }
 
         return QueryResponse(
             query=request.query,
             answer=answer,
             tickets=enriched_tickets,
             docs=enriched_docs,
-            model_name="mistral" if current_rag_agent else "N/A",
-            processing_time=0.1,
-            total_sources=len(enriched_tickets) + len(enriched_docs),
+            model_name=model_name,
+            processing_time=metrics["processing_time"],
+            total_sources=metrics["total_sources"],
             confidence_score=confidence,
-            metadata={"rag_agent_available": current_rag_agent is not None}
+            metadata={"rag_agent_available": current_rag_agent is not None, "provider": request.provider, "model": request.model},
+            metrics=metrics
         )
 
     except Exception as e:
@@ -332,7 +359,7 @@ async def evaluate_response(request: EvaluationRequest):
 
 @app.get("/", response_class=HTMLResponse)
 async def home(request: Request):
-    return templates.TemplateResponse("index.html", {"request": request})
+    return templates.TemplateResponse(request, "index.html")
 
 
 if __name__ == "__main__":

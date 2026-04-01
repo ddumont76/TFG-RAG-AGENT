@@ -1,4 +1,15 @@
-
+# Empezamos #
+1. Iniciar si no está dockerizado
+2. Clone del repositorio: git clone
+3. Abrimos nueva terminal sobre el proyecto y creamos el entorno de desarrollo
+  cd C:\Users\dedug\Documents\Master_IA\work\TFG-RAG-AGENT>
+  python -m venv venv ( Python -- version 3.14.2)
+4. Activamos el entorno:
+  .\venv\Scripts\activate 
+# Instalamos todas las dependencias del proyecto 
+  pip install -r requirements.txt
+# Ejecutar run_api.py
+python run_api.py
 ###################################
 ## PASO 1 ESTRUCTURA DE CARPETAS ##
 ###################################
