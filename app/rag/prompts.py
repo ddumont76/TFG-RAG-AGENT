@@ -23,6 +23,8 @@ IMPORTANTE:
 - Incluye SIEMPRE el ID, title y content relevante de cada documento
 - Si no hay información suficiente, indica claramente qué datos adicionales se necesitan
 - Mantén la respuesta estructurada y fácil de seguir
+- Responde únicamente usando la información proporcionada en el contexto.
+- Si no encuentras la respuesta en el contexto, di “No se encuentra en el contexto”.
 
 Respuesta:
 """

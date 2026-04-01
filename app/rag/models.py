@@ -1,10 +1,9 @@
 """
-Configuración de modelo LLM para el agente RAG (Ollama + OpenAI + fallback).
+Configuración de modelo LLM para el agente RAG (Ollama + fallback).
 """
 
 import os
 from langchain_community.llms import Ollama
-from langchain_openai import OpenAI
 
 
 class MockLLM:
@@ -21,19 +20,16 @@ class LLMConfig:
     MODELS = {
         "mistral": {
             "ollama_model": "mistral",
-            "openai_model": "gpt-4o",
             "max_tokens": 1024,
             "temperature": 0.1
         },
         "phi-4": {
             "ollama_model": "phi-4",
-            "openai_model": "gpt-4o",
             "max_tokens": 1024,
             "temperature": 0.1
         },
-        "openai": {
-            "ollama_model": "phi-4",
-            "openai_model": "gpt-4o-mini",
+        "qwen-2.5": {
+            "ollama_model": "qwen-2.5",
             "max_tokens": 1024,
             "temperature": 0.1
         }
@@ -44,33 +40,35 @@ class LLMConfig:
         provider = (provider or os.getenv("LLM_PROVIDER", "ollama")).strip().lower()
         model_name = (model_name or os.getenv("LLM_MODEL", "mistral")).strip().lower()
 
+        # Normalizar variantes de nombres de modelo
+        if model_name in {"phi4", "phi-4"}:
+            model_name = "phi-4"
+        if model_name in {"qwen2.5", "qwen-2.5", "qwen25"}:
+            model_name = "qwen-2.5"
+
         config = LLMConfig.MODELS.get(model_name)
         if config is None:
-            raise ValueError(f"Modelo desconocido: {model_name}. Usa 'mistral' o 'phi-4'.")
+            raise ValueError(
+                f"Modelo desconocido: {model_name}. Usa 'mistral', 'phi-4' o 'qwen-2.5'."
+            )
 
         if provider == "ollama":
             model_id = config.get("ollama_model", "mistral")
-            print(f"🦙 Cargando {model_name} via Ollama ({model_id})")
+            print(f"[Ollama] Cargando {model_name} via Ollama ({model_id})")
             return Ollama(
                 model=model_id,
                 temperature=config["temperature"],
                 num_predict=config["max_tokens"]
             )
 
-        if provider == "openai":
-            model_id = config.get("openai_model", "gpt-4o-mini")
-            print(f"☁️ Cargando {model_name} via OpenAI ({model_id})")
-            return OpenAI(
-                model=model_id,
-                temperature=config["temperature"],
-                max_tokens=config["max_tokens"]
-            )
-
         if provider in {"mock", "none"}:
-            print("🛠️  Usando modelo de fallback MockLLM (sin motor real).")
+            print("[MockLLM] Usando modelo de fallback MockLLM (sin motor real).")
             return MockLLM()
 
-        raise ValueError(f"Proveedor LLM desconocido: {provider}. Usa 'ollama', 'openai' o 'mock'.")
+        raise ValueError(f"Proveedor LLM desconocido: {provider}. Usa 'ollama' o 'mock'.")            print("[MockLLM] Usando modelo de fallback MockLLM (sin motor real).")
+            return MockLLM()
+
+        raise ValueError(f"Proveedor LLM desconocido: {provider}. Usa 'ollama' o 'mock'.")
 
     @staticmethod
     def get_available_models():

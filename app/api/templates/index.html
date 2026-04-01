@@ -20,12 +20,9 @@
 
     <label>Proveedor y Modelo LLM:</label>
     <select id="llm_option">
-        <option value="mock" selected>Mock (sin LLM)</option>
-        <option value="ollama-mistral">Ollama - Mistral</option>
+        <option value="ollama-mistral" selected>Ollama - Mistral</option>
         <option value="ollama-phi4">Ollama - Phi-4</option>
-        <option value="openai-mistral">OpenAI - GPT-4o (Mistral)</option>
-        <option value="openai-phi4">OpenAI - GPT-4o (Phi-4)</option>
-        <option value="openai-gpt4omini">OpenAI - GPT-4o-mini</option>
+        <option value="ollama-qwen2.5">Ollama - Qwen-2.5 (3B)</option>
     </select>
 
     <button onclick="sendQuery()">Enviar consulta</button>

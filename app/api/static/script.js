@@ -1,20 +1,31 @@
 async function sendQuery() {
-    const query = document.getElementById("query").value;
+    const query = document.getElementById("query").value.trim();
     const top_k = document.getElementById("top_k").value;
     const llm_option = document.getElementById("llm_option").value;
+
+    // Validación: no enviar consulta vacía
+    if (!query) {
+        alert("Por favor, introduce algún texto en el campo de consulta antes de enviar.");
+        return;
+    }
 
     // Parse provider and model from the combined option
     let provider, model;
     if (llm_option === "mock") {
         provider = "mock";
-        model = "mistral"; // Default model for mock
+        model = "mistral"; // Default model (fallback)
     } else {
         const parts = llm_option.split("-");
-        provider = parts[0]; // ollama or openai
-        if (parts[1] === "gpt4omini") {
-            model = "openai"; // Special case for gpt-4o-mini
+        provider = parts[0]; // ollama
+
+        if (provider === "ollama" && parts[1] === "mistral") {
+            model = "mistral";
+        } else if (provider === "ollama" && parts[1] === "phi4") {
+            model = "phi4"; // será normalizado en backend a phi-4
+        } else if (provider === "ollama" && parts[1] === "qwen2.5") {
+            model = "qwen2.5"; // será normalizado en backend a qwen-2.5
         } else {
-            model = parts[1]; // mistral or phi4
+            model = "mistral";
         }
     }
 

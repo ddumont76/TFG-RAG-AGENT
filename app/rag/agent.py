@@ -35,15 +35,15 @@ class RAGAgent:
         Inicializa el agente RAG.
 
         Args:
-            model_name: Nombre del modelo LLM a usar (mistral / phi-4).
-            provider: Proveedor de LLM (ollama / openai / mock).
+            model_name: Nombre del modelo LLM a usar (mistral / phi-4 / phi4).
+            provider: Proveedor de LLM (ollama / mock).
             use_local: Si usar modelo local (principalmente para Ollama).
         """
         self.model_name = model_name
         self.provider = provider or os.getenv("LLM_PROVIDER", "ollama")
         self.use_local = use_local
         self.llm = LLMConfig.get_model(model_name, provider=self.provider, use_local=use_local)
-        print(f"🤖 Agente RAG inicializado con modelo: {model_name} (provider={self.provider})")
+        print(f"[RAGAgent] Agente RAG inicializado con modelo: {model_name} (provider={self.provider})")
 
     def _prepare_context(self, tickets: List[Dict], docs: List[Dict], max_length: int = 3000) -> Dict[str, str]:
         """
@@ -160,7 +160,7 @@ class RAGAgent:
             )
 
             # Generar respuesta con LLM
-            print(f"🧠 Generando respuesta con {self.model_name}...")
+            print(f"[RAGAgent] Generando respuesta con {self.model_name}...")
             answer = self.llm.invoke(prompt)
 
             # Calcular confianza

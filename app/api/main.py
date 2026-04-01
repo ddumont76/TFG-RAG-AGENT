@@ -5,6 +5,7 @@ import os
 from sentence_transformers import SentenceTransformer
 from typing import List, Dict, Any
 
+
 from fastapi.responses import HTMLResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
@@ -134,8 +135,8 @@ async def health_check():
 class QueryRequest(BaseModel):
     query: str
     top_k: int = 5
-    provider: str = "mock"  # ollama, openai, mock
-    model: str = "mistral"  # mistral, phi-4
+    provider: str = "mock"  # ollama, mock
+    model: str = "mistral"  # mistral, phi-4, qwen-2.5
 
 
 class QueryResponse(BaseModel):
