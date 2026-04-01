@@ -34,8 +34,13 @@ def retrieve_contexts(query: str, top_k: int = 5):
     )
     
     contexts = []
-    contexts.extend([doc for doc in tickets_results.get("documents", [[]])[0]])
-    contexts.extend([doc for doc in docs_results.get("documents", [[]])[0]])
+    tickets_docs = tickets_results.get("documents", [[]])
+    if tickets_docs and len(tickets_docs) > 0:
+        contexts.extend([doc for doc in tickets_docs[0]])
+    
+    docs_docs = docs_results.get("documents", [[]])
+    if docs_docs and len(docs_docs) > 0:
+        contexts.extend([doc for doc in docs_docs[0]])
     
     return contexts
 
@@ -95,9 +100,10 @@ async def run_evaluation_batch():
     # Evaluar batch
     print("\n📈 Calculando métricas RAGAS...\n")
     
-    results = await (evaluate_batch(queries, answers, contexts_list) 
-                     if asyncio.iscoroutinefunction(evaluate_batch) 
-                     else asyncio.coroutine(lambda: evaluate_batch(queries, answers, contexts_list))())
+    if asyncio.iscoroutinefunction(evaluate_batch):
+        results = await evaluate_batch(queries, answers, contexts_list)
+    else:
+        results = evaluate_batch(queries, answers, contexts_list)
     
     # Mostrar resultados
     print("\n" + "=" * 80)

@@ -49,7 +49,7 @@ class LLMConfig:
             raise ValueError(f"Modelo desconocido: {model_name}. Usa 'mistral' o 'phi-4'.")
 
         if provider == "ollama":
-            model_id = config.get("ollama_model")
+            model_id = config.get("ollama_model", "mistral")
             print(f"🦙 Cargando {model_name} via Ollama ({model_id})")
             return Ollama(
                 model=model_id,
@@ -58,10 +58,10 @@ class LLMConfig:
             )
 
         if provider == "openai":
-            model_id = config.get("openai_model")
+            model_id = config.get("openai_model", "gpt-4o-mini")
             print(f"☁️ Cargando {model_name} via OpenAI ({model_id})")
             return OpenAI(
-                model_name=model_id,
+                model=model_id,
                 temperature=config["temperature"],
                 max_tokens=config["max_tokens"]
             )
