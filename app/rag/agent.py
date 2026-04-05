@@ -3,6 +3,7 @@ Agente RAG principal para consultas sobre Data & IA.
 """
 
 import time
+import os
 from typing import List, Dict, Any, Optional
 from dataclasses import dataclass
 from datetime import datetime
@@ -238,4 +239,4 @@ class RAGAgent:
             return self.llm.invoke(prompt)
 
         except Exception as e:
-            return f"Error generando resumen: {str(e)}. Total fuentes: {len(tickets) + len(docs)}"
+            raise e

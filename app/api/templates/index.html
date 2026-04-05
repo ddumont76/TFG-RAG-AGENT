@@ -2,7 +2,7 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8" />
-    <title>Agente RAG – TFG Deborah</title>
+    <title>Agente RAG para la asistencia inteligente en resolución de Incidencias </title>
     <link rel="stylesheet" href="/static/style.css" />
     <style>
         .section {
@@ -223,7 +223,7 @@
 
 <body>
 
-<h1>🧠 Agente RAG – TFG Deborah</h1>
+<h1>🧠 Agente RAG para la asistencia inteligente en resolución de Incidencias </h1>
 
 <div class="container">
     <div class="section">
@@ -242,9 +242,8 @@
             <div>
                 <label>Modelo LLM:</label>
                 <select id="llm_option">
-                    <option value="ollama-mistral" selected>Ollama - Mistral</option>
-                    <option value="ollama-phi4">Ollama - Phi-4</option>
-                    <option value="ollama-qwen2.5">Ollama - Qwen-2.5 (3B)</option>
+                    <option value="ollama-qwen2.5" selected>Ollama - Qwen-2.5 (3B)</option>
+                    <option value="ollama-mistral">Ollama - Mistral</option>
                     <option value="mock">Mock (sin LLM)</option>
                 </select>
             </div>
@@ -261,7 +260,6 @@
 
         <div class="button-group">
             <button onclick="sendQuery()" id="send-btn">Enviar consulta</button>
-            <button class="secondary danger" onclick="cancelQuery()" id="cancel-btn" style="display: none;">⏹️ Cancelar</button>
             <button class="secondary" onclick="clearResults()">Limpiar resultados</button>
         </div>
 
@@ -325,15 +323,15 @@
                     <div class="metric-interpretation" id="rel-interp"></div>
                 </div>
                 <div class="metric-card">
-                    <div class="metric-label">Context Precision</div>
-                    <div class="metric-value" id="context_precision">-</div>
-                    <div class="metric-interpretation" id="prec-interp"></div>
+                    <div class="metric-label">context_utilization</div>
+                    <div class="metric-value" id="context_utilization">-</div>
+                    <div class="metric-interpretation" id="context-interp"></div>
                 </div>
-                <div class="metric-card">
+                <!--div class="metric-card">
                     <div class="metric-label">Context Recall</div>
                     <div class="metric-value" id="context_recall">-</div>
                     <div class="metric-interpretation" id="recall-interp"></div>
-                </div>
+                </div-->
             </div>
         </div>
 

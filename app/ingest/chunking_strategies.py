@@ -246,7 +246,7 @@ class ChunkingFactory:
         return strategy_class(**kwargs)
 
 
-def compare_chunking_strategies(text: str, strategies: List[str] = None) -> Dict[str, Any]:
+def compare_chunking_strategies(text: str, strategies: List[str] = [None]) -> Dict[str, Any]:
     """
     Compara múltiples estrategias de chunking.
     

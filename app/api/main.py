@@ -85,7 +85,7 @@ templates = Jinja2Templates(directory="app/api/templates")
 
 # Inicializar componentes
 client = chromadb.PersistentClient(path="chroma_db")
-embedding_model = SentenceTransformer("all-MiniLM-L6-v2")
+embedding_model = SentenceTransformer("BAAI/bge-m3", trust_remote_code=True)
 
 tickets_collection = client.get_or_create_collection(name="tickets")
 docs_collection = client.get_or_create_collection(name="docs")
@@ -253,7 +253,12 @@ async def query_rag(request: QueryRequest):
                     answer=answer,
                     contexts=contexts
                 )
-                ragas_metrics = evaluation_results.get("metrics", {})
+                raw_metrics = evaluation_results.get("metrics", {})
+                ragas_metrics = {
+                    "faithfulness": float(raw_metrics.get("faithfulness", 0)),
+                    "answer_relevancy": float(raw_metrics.get("answer_relevancy", 0)),
+                    "context_utilization": float(raw_metrics.get("context_utilization", 0))
+                }
         except Exception as e:
             print(f"Advertencia: No se pudieron calcular métricas RAGAS: {e}")
         
@@ -265,10 +270,9 @@ async def query_rag(request: QueryRequest):
         if ragas_metrics:
             ragas_metadata = {
                 "ragas_evaluation": {
-                    "faithfulness": ragas_metrics.get("faithfulness", "N/A"),
-                    "answer_relevancy": ragas_metrics.get("answer_relevancy", "N/A"),
-                    "context_precision": ragas_metrics.get("context_precision", "N/A"),
-                    "context_recall": ragas_metrics.get("context_recall", "N/A"),
+                    "faithfulness": ragas_metrics["faithfulness"],
+                    "answer_relevancy": ragas_metrics["answer_relevancy"],
+                    "context_utilization": ragas_metrics["context_utilization"],
                     "note": "Métricas de evaluación RAGAS calculadas automáticamente"
                 }
             }

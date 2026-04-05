@@ -40,7 +40,10 @@ def main():
 
     print("\n=== Semantics smoke test ===")
     # Use same model as ingestion
-    model = SentenceTransformer("all-MiniLM-L6-v2")
+    model =SentenceTransformer(
+    "BAAI/bge-m3",
+    trust_remote_code=True
+    )
     query_text = "Error en Jenkins al desplegar en Kubernetes"
     q_embedding = model.encode(query_text).tolist()
 

@@ -201,8 +201,7 @@ Evalúa la calidad de una respuesta RAG usando métricas RAGAS.
   "metrics": {
     "faithfulness": 0.85,
     "answer_relevancy": 0.92,
-    "context_precision": 0.88,
-    "context_recall": 0.80
+   
   },
   "avg_score": 0.8625,
   "metric_descriptions": {...}
@@ -259,7 +258,7 @@ DOCUMENTOS DE CONFLUENCE CARGADOS:
 ## PASO 6 Crear embeddungs e indexar datos en ChromaDB ##
 ################################################################
 
-app/ingest/create_embeddings.py
+ python -m app.ingest.create_embeddings
 
 Este script hará:
 
@@ -400,6 +399,21 @@ Estos archivos contienen la documentación completa de la API y pueden ser utili
 ################################################################
 ## PASO 9.5 Evaluación RAGAS - Métricas de Calidad ##
 ################################################################
+#Problemas con la ultima versión de RAGAS, así que volvemos a una versión más estable 0.1.4 en vez  0.2.4
+
+Con:
+- ragas==0.1.4
+- langchain==0.1.16
+- langchain-community==0.0.33
+ya podemos usar sin problemas:
+- OllamaLLM
+- HuggingFaceEmbeddings
+- context_utilization
+- answer_relevance
+- evaluación moderna con RAGAS
+
+
+
 
 Instalamos RAGAS para evaluar la calidad del sistema RAG:
 
