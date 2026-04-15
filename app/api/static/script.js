@@ -77,8 +77,8 @@ async function sendQuery() {
         if (data.metrics) {
             updateMetricCard("faithfulness: ¿Qué tan fiel es la respuesta al contexto recuperado?", data.metrics.faithfulness);
             updateMetricCard("answer_relevancy: ¿Qué tan relevante es la respuesta respecto a la pregunta?", data.metrics.answer_relevancy);
-            updateMetricCard("context_utilization: ¿Qué tan bien se utiliza el contexto en la respuesta?", data.metrics.context_utilization);
-            //updateMetricCard("context_recall", data.metrics.context_recall);
+            updateMetricCard("context_precision: ¿Qué tan bien se utiliza el contexto en la respuesta?", data.metrics.context_precision);
+            updateMetricCard("context_recall: ¿Qué tan completa es la respuesta con respecto al contexto?   ", data.metrics.context_recall);
         }
 
     } catch (error) {
@@ -99,8 +99,8 @@ function updateMetricCard(metricName, value) {
     // Interpretar y cambiar color
     const interpId = metricName === "faithfulness" ? "faith-interp" : 
                      metricName === "answer_relevancy" ? "rel-interp" :
-                      metricName === "context_utilization" ? "context-interp" :
-                     //metricName === "context_precision" ? "prec-interp" : "recall-interp";
+                      metricName === "context_precision" ? "prec-interp" :
+                     metricName === "context_recall" ? "recall-interp" : "unknown-interp";
     
     document.getElementById(interpId).innerText = interpretation;
     

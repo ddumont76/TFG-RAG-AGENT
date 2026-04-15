@@ -22,7 +22,7 @@ tfg-rag-agent/
 │   ├── ingest/
 │   ├── rag/
 │   ├── api/    ✅ FastAPI implementada
-│── venv/       (se generará automáticamente)
+│── venv/       (Entorno de Python se generará automáticamente)
 │── requirements.txt
 │── run_api.py  ✅ Script para ejecutar la API
 
@@ -399,20 +399,16 @@ Estos archivos contienen la documentación completa de la API y pueden ser utili
 ################################################################
 ## PASO 9.5 Evaluación RAGAS - Métricas de Calidad ##
 ################################################################
-#Problemas con la ultima versión de RAGAS, así que volvemos a una versión más estable 0.1.4 en vez  0.2.4
-
-Con:
-- ragas==0.1.4
-- langchain==0.1.16
-- langchain-community==0.0.33
-ya podemos usar sin problemas:
-- OllamaLLM
-- HuggingFaceEmbeddings
-- context_utilization
-- answer_relevance
-- evaluación moderna con RAGAS
+# Durante el desarrollo se observó que métricas clásicas como context_utilization han sido eliminadas en versiones recientes de RAGAS.
+# Por ello, se adaptó el #sistema de evaluación a las métricas modernas propuestas por la librería, como context_precision y context_recall,
+# sin modificar el pipeline RAG
 
 
+RAGAS-METRICS:
+- context_precision (Uso efectivo del contexto) ya que en RAGAS.Metrics fue deprecada context_utilization
+- context_recall (Cobertura del contexto)
+- answer_relevance (Relevancia de la respuesta)
+- faithfulness (Alucinaciones)
 
 
 Instalamos RAGAS para evaluar la calidad del sistema RAG:

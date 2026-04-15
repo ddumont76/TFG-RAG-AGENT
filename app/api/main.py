@@ -16,6 +16,7 @@ from app.ingest.chunking_strategies import ChunkingFactory, compare_chunking_str
 # Variables globales para cache de datos (cargadas de forma lazy)
 TICKETS_DATA = None
 DOCS_DATA = None
+METRIC_RANGES = {'faithfulness': {'desc': '¿Qué tan fiel es la respuesta al contexto recuperado?', 'range': '0.0 = infiel, 1.0 = totalmente fiel'}, 'answer_relevancy': {'desc': '¿Qué tan relevante es la respuesta respecto a la pregunta?', 'range': '0.0 = no relevante, 1.0 = muy relevante'}, 'context_precision': {'desc': '¿Cuánto del contexto recuperado fue realmente usado en la respuesta?', 'range': '0.0 = nada usado, 1.0 = todo usado'}, 'context_recall': {'desc': '¿Qué tan completa es la respuesta con respecto al contexto?', 'range': '0.0 = nada encontrada, 1.0 = todo encontrada'}}
 
 def get_tickets_data():
     """Carga datos de tickets de forma lazy."""
@@ -156,7 +157,7 @@ class EvaluationRequest(BaseModel):
     query: str
     answer: str
     contexts: List[str]
-    ground_truth: str = None
+    ground_truth: str = ""
 
 
 class EvaluationResponse(BaseModel):
@@ -248,7 +249,7 @@ async def query_rag(request: QueryRequest):
             
             if answer and contexts:
                 evaluator = RAGEvaluator()
-                evaluation_results = evaluator.evaluate_single_query(
+                evaluation_results = await evaluator.evaluate_single_query(
                     query=request.query,
                     answer=answer,
                     contexts=contexts
@@ -257,7 +258,8 @@ async def query_rag(request: QueryRequest):
                 ragas_metrics = {
                     "faithfulness": float(raw_metrics.get("faithfulness", 0)),
                     "answer_relevancy": float(raw_metrics.get("answer_relevancy", 0)),
-                    "context_utilization": float(raw_metrics.get("context_utilization", 0))
+                    "context_precision": float(raw_metrics.get("context_precision", 0)),
+                    "context_recall": float(raw_metrics.get("context_recall", 0))
                 }
         except Exception as e:
             print(f"Advertencia: No se pudieron calcular métricas RAGAS: {e}")
@@ -336,10 +338,10 @@ async def ask_rag(query: str, top_k: int = 5):
 '''Por defecto que filtra resultados con similitud baja (score > 0.6 se descartan).
 Los scores más bajos indican mayor similitud. Ahora solo devuelve resultados realmente relevantes.
 Puedes ajustar la precisión:
+    score_threshold=0.5 → Más estricto (menos resultados)
+    score_threshold=0.7 → Más permisivo (más resultados)
+    Ejemplo: GET /search/tickets?query=jenkins&score_threshold=0.5'''
 
-score_threshold=0.5 → Más estricto (menos resultados)
-score_threshold=0.7 → Más permisivo (más resultados)
-Ejemplo: GET /search/tickets?query=jenkins&score_threshold=0.5'''
 @app.get("/search/tickets")
 async def search_tickets(query: str, top_k: int = 5, score_threshold: float = 0.6):
     """Buscar únicamente en tickets."""
@@ -402,7 +404,7 @@ async def evaluate_response(request: EvaluationRequest):
         evaluator = RAGEvaluator()
         
         # Evaluar la respuesta
-        results = evaluator.evaluate_single_query(
+        results = await evaluator.evaluate_single_query(
             query=request.query,
             answer=request.answer,
             contexts=request.contexts,

@@ -191,3 +191,4 @@ data/processed/
 *.dmg
 *.pkg
 chroma_db/chroma.sqlite3
+chroma_db/chroma.sqlite3

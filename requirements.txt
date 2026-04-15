@@ -1,15 +1,25 @@
+# ---------------- API ----------------
+fastapi
+uvicorn
+python-multipart
+jinja2
+
+# ---------------- RAG Core ----------------
 chromadb
 langchain
 langchain-community
-python-multipart
-jinja2
+langchain-core
+
+# ---------------- NLP / Models ----------------
 sentence-transformers
-pydantic
-fastapi
-uvicorn[standard]
 transformers
 torch
 accelerate
 bitsandbytes
 datasets
+
+# ---------------- Evaluation ----------------
 ragas
+
+# ---------------- Validation ----------------
+pydantic
