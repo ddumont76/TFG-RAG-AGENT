@@ -1,152 +1,136 @@
 """
-Evaluación RAGAS para RAG local con ChatOllama + BGE-M3.
-Las métricas RAGAS se ejecutan en un contexto asíncrono independiente mediante asyncio.to_thread, evitando conflictos con el event loop de FastAPI (uvloop).
- Esta aproximación mantiene la arquitectura del sistema y asegura compatibilidad con entornos de producción
-"""
-"""
-Evaluación RAGAS para RAG local con ChatOllama + BGE-M3.
-Compatible con FastAPI + uvicorn (sin nested event loop).
+Evaluación RAG usando RAGAS (sin ground truth).
+
+Dado que el sistema RAG opera sobre información dinámica y no dispone de un conjunto de respuestas de referencia, 
+la evaluación se realiza mediante métricas RAGAS que no requieren ground truth, como faithfulness y answer relevancy,
+siguiendo prácticas habituales en sistemas RAG reales.
+
+Métricas:
+- faithfulness
+- answer_relevancy
 """
 
-from typing import Dict, Any, Optional
 import asyncio
+from typing import List, Optional, Dict, Any
 
 from datasets import Dataset
 from ragas import evaluate
-from ragas.metrics import (
-    faithfulness,
-    answer_relevancy,
-    context_precision,
-    context_recall,
-)
+from ragas.metrics import faithfulness, answer_relevancy
 
 from langchain_community.chat_models import ChatOllama
 from langchain_community.embeddings import HuggingFaceEmbeddings
 
+from app.api.metric_ranges import METRIC_RANGES
+
 
 class RAGEvaluator:
-    """Evaluador RAGAS con interfaz asíncrona segura para FastAPI."""
+    """
+    Evaluador RAGAS compatible con FastAPI.
+    Ejecuta RAGAS fuera del event loop para evitar errores async.
+    """
 
     def __init__(self, llm=None, embeddings=None):
         self.llm = llm or ChatOllama(model="qwen2.5:0.5b")
+
         self.embeddings = embeddings or HuggingFaceEmbeddings(
             model_name="BAAI/bge-m3"
         )
 
+        # ✅ SOLO métricas sin reference
         self.metrics = [
             faithfulness,
             answer_relevancy,
-            context_precision,
-            context_recall,
         ]
 
-    # ------------------------
-    # Dataset preparation
-    # ------------------------
-    def _prepare_dataset(self, queries, answers, contexts, ground_truths=None):
-        data = {
-            "question": queries,
-            "answer": answers,
-            "contexts": contexts,
-        }
+        
+    def _normalize_scores(self, scores: Any) -> Dict[str, float]:
+        """
+        Normaliza la salida de RAGAS a un dict[str, float].
+        En esta pipeline RAG, RAGAS devuelve siempre una lista de diccionarios.
+        """
 
-        if ground_truths:
-            data["ground_truth"] = ground_truths
+        # Caso normal: lista de diccionarios
+        if isinstance(scores, list) and scores:
+            return {k: float(v) for k, v in scores[0].items()}
 
-        return Dataset.from_dict(data)
+        # Caso alternativo: dict directo
+        if isinstance(scores, dict):
+            return {k: float(v) for k, v in scores.items()}
 
-    # ------------------------
-    # Sync evaluation (RAGAS)
-    # ------------------------
-    def _evaluate_sync(self, queries, answers, contexts, ground_truths=None):
-        dataset = self._prepare_dataset(
-            queries, answers, contexts, ground_truths
+        # Cualquier otro caso no esperado
+        return {}
+
+
+
+    # ------------------------------------------------------------
+    # Ejecución sync (RAGAS)
+     #Dado que RAGAS devuelve los resultados de evaluación mediante 
+     #objetos dinámicos sin tipado estático explícito, se emplea una
+     #normalización manual del contrato de salida, tratándolo como Any 
+     #y extrayendo las métricas esperadas. Esta aproximación es habitual 
+     #en sistemas basados en LLMs y garantiza compatibilidad con herramientas 
+     #de análisis estático sin afectar al comportamiento en tiempo de ejecución.
+    # ------------------------------------------------------------
+    def _evaluate_sync(
+        self,
+        queries: List[str],
+        answers: List[str],
+        contexts: List[List[str]],
+    ) -> Dict[str, Any]:
+
+        dataset = Dataset.from_dict(
+            {
+                "question": queries,
+                "answer": answers,
+                "contexts": contexts,
+            }
         )
-
-        results = evaluate(
+                    
+                
+        
+        results_any: Any = evaluate(
             dataset=dataset,
             metrics=self.metrics,
             llm=self.llm,
             embeddings=self.embeddings,
         )
 
+        metrics = self._normalize_scores(results_any.scores)
+
+        avg_score = (
+            sum(metrics.values()) / len(metrics)
+            if metrics
+            else 0.0
+        )
+
         return {
-            "metrics": results,
-            "avg_score": sum(results.values()) / len(results),
-            "status": "success",
+            "metrics": metrics,
+            "avg_score": avg_score,
+            "metric_ranges": METRIC_RANGES,
         }
 
-    # ------------------------
-    # Async public API (SAFE)
-    # ------------------------
-    async def evaluate_async(self, queries, answers, contexts, ground_truths=None):
-        """
-        Ejecuta RAGAS en un thread separado para evitar conflictos
-        con el event loop de FastAPI / uvicorn.
-        """
-        return await asyncio.to_thread(
-            self._evaluate_sync,
-            queries,
-            answers,
-            contexts,
-            ground_truths,
-        )
 
-    # ------------------------
-    # Batch evaluation
-    # ------------------------
-    @classmethod
-    async def evaluate_batch(
-        cls,
-        queries,
-        answers,
-        contexts,
-        ground_truths=None,
-        llm=None,
-        embeddings=None,
-    ):
-        evaluator = cls(llm=llm, embeddings=embeddings)
-        return await evaluator.evaluate_async(
-            queries, answers, contexts, ground_truths
-        )
-
-    # ------------------------
-    # Single query evaluation
-    # ------------------------
+    # ------------------------------------------------------------
+    # API pública async
+    # ------------------------------------------------------------
     async def evaluate_single_query(
         self,
         query: str,
         answer: str,
-        contexts: list,
-        ground_truth: Optional[str] = None,
+        contexts: List[str],
+        ground_truth: Optional[str] = None,  # intencionadamente ignorado
     ) -> Dict[str, Any]:
 
-        return await self.evaluate_async(
-            queries=[query],
-            answers=[answer],
-            contexts=[contexts],  # lista de listas
-            ground_truths=[ground_truth] if ground_truth else None,
+        if not contexts:
+            return {
+                "metrics": {},
+                "avg_score": 0.0,
+                "metric_ranges": METRIC_RANGES,
+            }
+
+        return await asyncio.to_thread(
+            self._evaluate_sync,
+            [query],
+            [answer],
+            [contexts],
         )
-
-
-# ------------------------
-# Metadata for UI / Docs
-# ------------------------
-METRIC_RANGES = {
-    "faithfulness": {
-        "desc": "¿Qué tan fiel es la respuesta al contexto recuperado?",
-        "range": "0.0 = infiel, 1.0 = totalmente fiel",
-    },
-    "answer_relevancy": {
-        "desc": "¿Qué tan relevante es la respuesta respecto a la pregunta?",
-        "range": "0.0 = no relevante, 1.0 = muy relevante",
-    },
-    "context_precision": {
-        "desc": "¿Cuánto del contexto recuperado fue realmente usado?",
-        "range": "0.0 = nada usado, 1.0 = todo usado",
-    },
-    "context_recall": {
-        "desc": "¿Qué tan completo es el contexto respecto a la respuesta?",
-        "range": "0.0 = incompleto, 1.0 = completo",
-    },
-}

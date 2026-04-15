@@ -1,180 +1,143 @@
 async function sendQuery() {
     const query = document.getElementById("query_text").value.trim();
-    const top_k = document.getElementById("top_k").value;
-    const llm_option = document.getElementById("llm_option").value;
-    const chunking_strategy = document.getElementById("chunking_strategy").value;
+    const topK = parseInt(document.getElementById("top_k").value, 10);
+    const llmOption = document.getElementById("llm_option").value;
 
-    // Validación: no enviar consulta vacía
+    // Validación básica
     if (!query) {
-        showError("Por favor, introduce algún texto en el campo de consulta antes de enviar.");
+        showError("Por favor, introduce una consulta antes de enviar.");
         return;
     }
 
     showLoading(true);
     hideError();
+    clearVisibleResults();
 
-    // Parse provider and model from the combined option
-    let provider, model;
-    if (llm_option === "mock") {
-        provider = "mock";
-        model = "mistral"; // Default model (fallback)
-    } else {
-        const parts = llm_option.split("-");
+    // Resolver provider + model desde el selector
+    let provider = "mock";
+    let model = "mistral";
+
+    if (llmOption !== "mock") {
+        const parts = llmOption.split("-");
         provider = parts[0]; // ollama
-
-        if (provider === "ollama" && parts[1] === "mistral") {
-            model = "mistral";
-        } else if (provider === "ollama" && parts[1] === "phi4") {
-            model = "phi4"; // será normalizado en backend a phi-4
-        } else if (provider === "ollama" && parts[1] === "qwen2.5") {
-            model = "qwen2.5"; // será normalizado en backend a qwen-2.5
-        } else {
-            model = "mistral";
-        }
+        model = parts[1] || "mistral";
     }
 
-    const body = {
+    const payload = {
         query: query,
-        top_k: parseInt(top_k),
+        top_k: topK,
         provider: provider,
-        model: model,
-        chunking_strategy: chunking_strategy
+        model: model
     };
 
     try {
         const response = await fetch("/query", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(body)
+            body: JSON.stringify(payload)
         });
 
         if (!response.ok) {
-            throw new Error(`HTTP error! status: ${response.status}`);
+            throw new Error(`Error HTTP ${response.status}`);
         }
 
         const data = await response.json();
 
-        // Mostrar todas las secciones de resultados
+        // Mostrar secciones
         showResultSections();
 
-        // Mostrar datos básicos
-        document.getElementById("answer").innerText = data.answer || "-";
-        document.getElementById("tickets").innerText = JSON.stringify(data.tickets, null, 2);
-        document.getElementById("docs").innerText = JSON.stringify(data.docs, null, 2);
-        document.getElementById("meta").innerText = JSON.stringify(data.metadata, null, 2);
-        document.getElementById("metrics").innerText = JSON.stringify(data.metrics, null, 2);
+        // Respuesta del agente
+        setText("answer", data.answer);
 
-        // Calcular y mostrar estadísticas
-        const ticketCount = data.tickets ? Object.keys(data.tickets).length : 0;
-        const docCount = data.docs ? Object.keys(data.docs).length : 0;
-        const totalSources = ticketCount + docCount;
+        // Fuentes
+        setText("tickets", JSON.stringify(data.tickets, null, 2));
+        setText("docs", JSON.stringify(data.docs, null, 2));
 
-        document.getElementById("tickets-count").innerText = ticketCount;
-        document.getElementById("docs-count").innerText = docCount;
-        document.getElementById("sources-count").innerText = totalSources;
+        // Metadata
+        setText("meta", JSON.stringify(data.metadata, null, 2));
 
-        // Mostrar y colorear métricas RAGAS
-        if (data.metrics) {
-            updateMetricCard("faithfulness: ¿Qué tan fiel es la respuesta al contexto recuperado?", data.metrics.faithfulness);
-            updateMetricCard("answer_relevancy: ¿Qué tan relevante es la respuesta respecto a la pregunta?", data.metrics.answer_relevancy);
-            updateMetricCard("context_precision: ¿Qué tan bien se utiliza el contexto en la respuesta?", data.metrics.context_precision);
-            updateMetricCard("context_recall: ¿Qué tan completa es la respuesta con respecto al contexto?   ", data.metrics.context_recall);
-        }
+        // Métricas básicas
+        setText("metrics", JSON.stringify(data.metrics, null, 2));
+
+        // Estadísticas
+        const ticketCount = Array.isArray(data.tickets) ? data.tickets.length : 0;
+        const docCount = Array.isArray(data.docs) ? data.docs.length : 0;
+
+        setText("tickets-count", ticketCount);
+        setText("docs-count", docCount);
+        setText("sources-count", ticketCount + docCount);
 
     } catch (error) {
+        console.error("Error en la consulta:", error);
         showError("Error al procesar la consulta: " + error.message);
-        console.error("Error:", error);
     } finally {
         showLoading(false);
     }
 }
 
-function updateMetricCard(metricName, value) {
-    const metric = parseFloat(value);
-    const valueStr = !isNaN(metric) ? metric.toFixed(2) : "-";
-    const interpretation = !isNaN(metric) ? interpretMetric(metricName, value) : "No disponible";
-    
-    document.getElementById(metricName).innerText = valueStr;
-    
-    // Interpretar y cambiar color
-    const interpId = metricName === "faithfulness" ? "faith-interp" : 
-                     metricName === "answer_relevancy" ? "rel-interp" :
-                      metricName === "context_precision" ? "prec-interp" :
-                     metricName === "context_recall" ? "recall-interp" : "unknown-interp";
-    
-    document.getElementById(interpId).innerText = interpretation;
-    
-    // Cambiar clase del color
-    const card = document.getElementById(metricName).closest('.metric-card');
-    card.classList.remove('low', 'medium', 'high');
-    
-    if (isNaN(metric)) {
-        // Sin color específico
-    } else if (metric < 0.4) {
-        card.classList.add('low');
-    } else if (metric < 0.7) {
-        card.classList.add('medium');
-    } else {
-        card.classList.add('high');
-    }
-}
+/* =========================
+   Helpers seguros
+========================= */
 
-function interpretMetric(metric_name, value) {
-    const numeric_value = parseFloat(value);
-    
-    if (isNaN(numeric_value) || value === "-") {
-        return "No disponible";
+function setText(id, value) {
+    const el = document.getElementById(id);
+    if (el) {
+        el.innerText = value ?? "-";
     }
-    
-    if (numeric_value < 0.2) return "Muy bajo";
-    if (numeric_value < 0.4) return "Bajo";
-    if (numeric_value < 0.6) return "Medio";
-    if (numeric_value < 0.8) return "Alto";
-    return "Muy alto";
 }
 
 function showResultSections() {
-    // Mostrar todas las secciones de resultados
-    document.getElementById("stats-section").classList.add("visible");
-    document.getElementById("answer-section").classList.add("visible");
-    document.getElementById("tickets-section").classList.add("visible");
-    document.getElementById("docs-section").classList.add("visible");
-    document.getElementById("metrics-section").classList.add("visible");
-    document.getElementById("metadata-section").classList.add("visible");
-    document.getElementById("basic-metrics-section").classList.add("visible");
+    const sectionIds = [
+        "stats-section",
+        "answer-section",
+        "tickets-section",
+        "docs-section",
+        "metadata-section",
+        "basic-metrics-section"
+    ];
+
+    sectionIds.forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.classList.add("visible");
+    });
+}
+
+function clearVisibleResults() {
+    const sectionIds = [
+        "stats-section",
+        "answer-section",
+        "tickets-section",
+        "docs-section",
+        "metadata-section",
+        "basic-metrics-section"
+    ];
+
+    sectionIds.forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.classList.remove("visible");
+    });
 }
 
 function clearResults() {
     document.getElementById("query_text").value = "";
-    
-    // Ocultar todas las secciones de resultados
-    document.getElementById("stats-section").classList.remove("visible");
-    document.getElementById("answer-section").classList.remove("visible");
-    document.getElementById("tickets-section").classList.remove("visible");
-    document.getElementById("docs-section").classList.remove("visible");
-    document.getElementById("metrics-section").classList.remove("visible");
-    document.getElementById("metadata-section").classList.remove("visible");
-    document.getElementById("basic-metrics-section").classList.remove("visible");
-    
+    clearVisibleResults();
     hideError();
 }
 
 function showLoading(show) {
-    const element = document.getElementById("loading");
-    if (show) {
-        element.classList.add("show");
-    } else {
-        element.classList.remove("show");
-    }
+    const el = document.getElementById("loading");
+    if (!el) return;
+    el.classList.toggle("show", show);
 }
 
 function showError(message) {
-    const element = document.getElementById("error");
-    element.innerText = message;
-    element.classList.add("show");
+    const el = document.getElementById("error");
+    if (!el) return;
+    el.innerText = message;
+    el.classList.add("show");
 }
 
 function hideError() {
-    const element = document.getElementById("error");
-    element.classList.remove("show");
+    const el = document.getElementById("error");
+    if (el) el.classList.remove("show");
 }
