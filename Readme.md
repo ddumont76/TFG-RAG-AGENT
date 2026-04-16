@@ -41,10 +41,10 @@ La interfaz se sirve directamente desde la API FastAPI y está orientada a la de
 ## Estructura del proyecto
 
 TFG-RAG-AGENT/
-├── Dockerfile
-├── docker-compose.yml
-├── .dockerignore
-├── .gitignore
+├── Dockerfile             # Fichero docker
+├── docker-compose.yml     # Orquestador docker
+├── .dockerignore          # Fichero para marcar que debe ignorar al dockerizar
+├── .gitignore             # Fichero para marcar que debe ignorar Github
 ├── data/
 │   ├── tickets/           # Tickets ficticios en formato JSON
 │   ├── confluence/        # Documentación técnica ficticia
@@ -54,9 +54,11 @@ TFG-RAG-AGENT/
 │   ├── api/               # API FastAPI y UI web
 │   ├── services/          # Servicios auxiliares
 ├── chroma_db/             # Base vectorial local (no versionada)
-├── requirements.txt
+├── requirements.txt       # Listado de dependencias
 ├── run_api.py
 └── README.md
+└── swagger.json
+└── swagger.yaml
 
 Nota: El directorio chroma_db/ se genera automáticamente y no se incluye en el repositorio.
 
@@ -251,6 +253,46 @@ En este contexto:
 - Métricas bajas no indican un fallo del sistema.
 
 El sistema prioriza respuestas útiles y prácticas frente a respuestas estrictamente extractivas.
+
+---
+
+## Troubleshooting (resolución de problemas comunes)
+
+### La aplicación no responde al realizar consultas
+
+- Verifique que el servicio Ollama está en ejecución:
+  ollama serve
+- Asegúrese de que los modelos necesarios están descargados:
+  ollama list
+
+---
+
+### Error de conexión con Ollama desde Docker
+
+- Confirme que Ollama se está ejecutando en el host y escucha en el puerto 11434.
+- En sistemas Windows o macOS, asegúrese de que Docker puede acceder a host.docker.internal.
+
+---
+
+### No se recuperan documentos o tickets
+
+- Compruebe que el proceso de generación de embeddings se ha ejecutado correctamente:
+  python -m app.ingest.create_embeddings
+- Verifique que el directorio chroma_db/ contiene datos persistidos.
+
+---
+
+### Las métricas RAGAS devuelven valores bajos
+
+- Este comportamiento es esperado cuando se utilizan modelos de lenguaje pequeños y evaluación sin ground truth.
+- Valores bajos no implican un fallo del sistema, sino un estilo de generación inferencial.
+
+---
+
+### La interfaz web no se muestra
+
+- Verifique que el contenedor o la aplicación local está exponiendo el puerto 8000.
+- Acceda a http://localhost:8000/ directamente desde el navegador.
 
 ---
 
