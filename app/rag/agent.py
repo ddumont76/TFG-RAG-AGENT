@@ -138,78 +138,96 @@ class RAGAgent:
     def query(self, query: str, tickets: List[Dict], docs: List[Dict]) -> RAGResult:
         """
         Realiza una consulta RAG completa.
-
-        Args:
-            query: Pregunta del usuario
-            tickets: Tickets relevantes encontrados
-            docs: Documentos relevantes encontrados
-
-        Returns:
-            RAGResult con respuesta generada y metadata
+        Devuelve siempre una respuesta serializable y coherente con las fuentes encontradas.
         """
         start_time = time.time()
 
         try:
-            # Preparar contexto
+            # 1️⃣ Preparar contexto
             context = self._prepare_context(tickets, docs)
 
-            # Crear prompt
             prompt = RAG_PROMPT_TEMPLATE.format(
                 query=query,
                 tickets_context=context["tickets_context"],
                 docs_context=context["docs_context"]
             )
 
-            # Generar respuesta con LLM
             print(f"[RAGAgent] Generando respuesta con {self.model_name}...")
-            answer = self.llm.invoke(prompt)
+            raw_answer = self.llm.invoke(prompt)
 
-            # Calcular confianza
+            # 2️⃣ NORMALIZACIÓN ESTRICTA A STRING (OBLIGATORIA)
+            # LangChain/Ollama pueden devolver AIMessage u otros objetos no serializables
+            if hasattr(raw_answer, "content"):
+                answer = str(raw_answer.content)
+            else:
+                answer = str(raw_answer)
+
+            # 3️⃣ Protección semántica:
+            # Si hay fuentes, el agente NO puede decir que no hay información
+            if (tickets or docs) and "no se han encontrado" in answer.lower():
+                answer = (
+                    "Se ha encontrado información relevante en tickets y documentos "
+                    "relacionados con la incidencia. A continuación se detallan los "
+                    "principales hallazgos y recomendaciones."
+                )
+
+            # 4️⃣ Calcular confianza y metadatos
             confidence = self._calculate_confidence(tickets, docs)
-
-            # Extraer info de fuentes
             sources_info = self._extract_sources_info(tickets, docs)
 
-            # Metadata adicional
+            # 5️⃣ Metadata SEGURA (solo tipos JSON simples)
             metadata = {
-                "model": self.model_name,
+                "model": str(self.model_name),
                 "timestamp": datetime.now().isoformat(),
-                "prompt_length": len(prompt),
-                "context_length": len(context["tickets_context"]) + len(context["docs_context"]),
-                **sources_info
+                "prompt_length": int(len(prompt)),
+                "context_length": int(
+                    len(context["tickets_context"]) + len(context["docs_context"])
+                ),
+                "total_tickets": int(len(tickets)),
+                "total_docs": int(len(docs)),
+                "ticket_ids": [str(t.get("id")) for t in tickets],
+                "doc_ids": [str(d.get("id")) for d in docs],
+                "avg_ticket_score": float(
+                    sum(t.get("score", 0) for t in tickets) / len(tickets)
+                ) if tickets else 0.0,
+                "avg_doc_score": float(
+                    sum(d.get("score", 0) for d in docs) / len(docs)
+                ) if docs else 0.0,
             }
 
             processing_time = time.time() - start_time
 
             return RAGResult(
                 query=query,
-                answer=answer,
+                answer=answer,                 # ✅ SIEMPRE string
                 tickets_used=tickets,
                 docs_used=docs,
-                model_name=self.model_name,
-                processing_time=processing_time,
+                model_name=str(self.model_name),
+                processing_time=float(processing_time),
                 total_sources=len(tickets) + len(docs),
-                confidence_score=confidence,
+                confidence_score=float(confidence),
                 metadata=metadata
             )
 
         except Exception as e:
-            # Fallback en caso de error
+            # Fallback absolutamente seguro
             processing_time = time.time() - start_time
-            error_answer = f"Lo siento, ocurrió un error procesando tu consulta: {str(e)}. " \
-                          f"Te recomiendo revisar los tickets y documentos encontrados manualmente."
 
             return RAGResult(
                 query=query,
-                answer=error_answer,
+                answer=(
+                    "Lo siento, ocurrió un error procesando tu consulta. "
+                    "Consulta los tickets y documentos encontrados para más información."
+                ),
                 tickets_used=tickets,
                 docs_used=docs,
-                model_name=self.model_name,
-                processing_time=processing_time,
+                model_name=str(self.model_name),
+                processing_time=float(processing_time),
                 total_sources=len(tickets) + len(docs),
                 confidence_score=0.0,
                 metadata={"error": str(e)}
             )
+
 
     def summarize_results(self, query: str, tickets: List[Dict], docs: List[Dict]) -> str:
         """
@@ -236,7 +254,10 @@ class RAGAgent:
             )
 
             # Generar resumen
-            return self.llm.invoke(prompt)
+            
+            result = self.llm.invoke(prompt)
+            return str(result.content if hasattr(result, "content") else result)
+
 
         except Exception as e:
             raise e

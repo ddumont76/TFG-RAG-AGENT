@@ -197,3 +197,26 @@ pre {
     white-space: pre-wrap;
     color: #2c3e50;
 }
+
+#evaluation-section {
+    border-left: 4px solid #2196F3;
+}
+
+
+/* ===== Evaluar respuesta button ===== */
+
+#eval-btn {
+    opacity: 0.4;
+    cursor: not-allowed;
+}
+
+#eval-btn.enabled {
+    opacity: 1;
+    cursor: pointer;
+    background: linear-gradient(135deg, #2196F3, #1e88e5);
+}
+
+h3[title] {
+    cursor: help;
+}
+

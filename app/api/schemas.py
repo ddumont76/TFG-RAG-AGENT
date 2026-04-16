@@ -20,7 +20,7 @@ class QueryResponse(BaseModel):
     total_sources: int
     confidence_score: float
     metadata: Dict[str, Any]
-    metrics: Dict[str, float] = Field(default_factory=dict)
+    metrics: Dict[str, Any]
 
 
 class EvaluationRequest(BaseModel):

@@ -190,5 +190,4 @@ data/processed/
 *.msi
 *.dmg
 *.pkg
-chroma_db/chroma.sqlite3
-chroma_db/chroma.sqlite3
+

@@ -34,24 +34,29 @@ def enrich_ticket_results(tickets_results):
 
     for i, content in enumerate(tickets_results["documents"][0]):
         ticket_id = tickets_results["ids"][0][i]
-        score = (
+        raw_score = (
             tickets_results["distances"][0][i]
             if "distances" in tickets_results
             else None
         )
 
+        score = float(raw_score) if raw_score is not None else None
+
+
         ticket_info = tickets_data.get(ticket_id, {})
 
-        enriched_tickets.append(
-            {
-                "id": ticket_id,
-                "summary": ticket_info.get("summary", "N/A"),
-                "description": ticket_info.get("description", ""),
-                "comments": ticket_info.get("comments", []),
-                "content": content,
-                "score": score,
-            }
-        )
+       
+    
+        enriched_tickets.append({
+            "id": ticket_id,
+            "summary": ticket_info.get("summary") or content[:120],
+            "description": ticket_info.get("description", ""),
+            "comments": ticket_info.get("comments", []),
+            "content": content,
+            "score": float(raw_score) if raw_score is not None else None,
+        })
+
+
 
     return enriched_tickets
 
@@ -63,21 +68,25 @@ def enrich_docs_results(docs_results):
 
     for i, content in enumerate(docs_results["documents"][0]):
         doc_id = docs_results["ids"][0][i]
-        score = (
+        
+        raw_score = (
             docs_results["distances"][0][i]
             if "distances" in docs_results
             else None
         )
 
+        score = float(raw_score) if raw_score is not None else None
+
+
         doc_info = docs_data.get(doc_id, {})
 
-        enriched_docs.append(
-            {
-                "id": doc_id,
-                "title": doc_info.get("title", "N/A"),
-                "content": doc_info.get("content", content),
-                "score": score,
-            }
-        )
+        
+        enriched_docs.append({
+            "id": doc_id,
+            "title": doc_info.get("title") or content[:80],
+            "content": doc_info.get("content", content),
+            "score": float(raw_score) if raw_score is not None else None,
+        })
+
 
     return enriched_docs
