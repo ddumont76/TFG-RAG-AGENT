@@ -1,18 +1,24 @@
 version: "3.9"
 
 services:
-  api:
+  rag-api:
     build: .
-    container_name: rag_api
+    container_name: rag-api
     ports:
       - "8000:8000"
     volumes:
+      - ./data:/app/data
       - ./chroma_db:/app/chroma_db
     environment:
+      - PYTHONUNBUFFERED=1
       - OLLAMA_BASE_URL=http://host.docker.internal:11434
-    networks:
-      - rag_net
+    depends_on:
+      - chroma
 
-networks:
-  rag_net:
-    driver: bridge
+  chroma:
+    image: ghcr.io/chroma-core/chroma:latest
+    container_name: chroma-db
+    ports:
+      - "8001:8000"
+    volumes:
+      - ./chroma_db:/chroma/chroma

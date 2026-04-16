@@ -1,18 +1,28 @@
 FROM python:3.10-slim
 
+# Evitar prompts interactivos
+ENV DEBIAN_FRONTEND=noninteractive
+
+# Directorio de trabajo
 WORKDIR /app
 
-# Evitar buffering y acelerar logs
-ENV PYTHONUNBUFFERED=1
-
+# Copiar requirements primero (mejor cache)
 COPY requirements.txt .
 
-RUN pip install --no-cache-dir -r requirements.txt
+# Instalar dependencias del sistema mínimas
+RUN apt-get update && apt-get install -y \
+    build-essential \
+    && rm -rf /var/lib/apt/lists/*
 
-# Copiar el código de tu proyecto
+# Instalar dependencias Python
+RUN pip install --upgrade pip && \
+    pip install -r requirements.txt
+
+# Copiar el resto del proyecto
 COPY . .
 
+# Exponer puerto FastAPI
 EXPOSE 8000
 
-# Comando para arrancar FastAPI
-CMD ["uvicorn", "app.api.main:app", "--host", "0.0.0.0", "--port", "8000"]
+# Arrancar la API
+CMD ["python", "run_api.py"]

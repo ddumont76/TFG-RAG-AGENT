@@ -41,6 +41,10 @@ La interfaz se sirve directamente desde la API FastAPI y está orientada a la de
 ## Estructura del proyecto
 
 TFG-RAG-AGENT/
+├── Dockerfile
+├── docker-compose.yml
+├── .dockerignore
+├── .gitignore
 ├── data/
 │   ├── tickets/           # Tickets ficticios en formato JSON
 │   ├── confluence/        # Documentación técnica ficticia
@@ -58,7 +62,52 @@ Nota: El directorio chroma_db/ se genera automáticamente y no se incluye en el 
 
 ---
 
-## Ejecución del proyecto (local)
+## Ejecución del proyecto con Docker (recomendada)
+
+La aplicación puede ejecutarse de forma completamente reproducible utilizando Docker y Docker Compose, evitando problemas de dependencias y diferencias entre sistemas operativos.
+
+### Requisitos previos
+
+- Docker Desktop instalado y en ejecución.
+- Ollama instalado y ejecutándose en el sistema host.
+
+### Arranque del servicio Ollama
+
+Antes de levantar los contenedores, es necesario iniciar el servicio Ollama en el host:
+
+ollama serve
+
+Asegúrese de tener descargados los modelos utilizados:
+
+ollama pull qwen2.5
+ollama pull mistral
+
+---
+
+### Construcción y arranque de la aplicación
+
+Desde la raíz del proyecto:
+
+docker compose up --build
+
+La primera ejecución puede tardar unos minutos debido a la descarga de dependencias.
+
+---
+
+### Acceso a la aplicación
+
+Una vez arrancado el sistema:
+
+- Interfaz web: http://localhost:8000/
+- Dokumentación Swagger: http://localhost:8000/docs
+- Health check: http://localhost:8000/health
+
+---
+
+## Ejecución del proyecto sin Docker (local)
+
+Como alternativa, el proyecto también puede ejecutarse directamente en el entorno local.
+
 
 ### 1. Crear entorno virtual
 
@@ -137,8 +186,6 @@ La aplicación estará disponible en:
 - Health check: http://localhost:8000/health
 
 ---
-
-
 
 ## Endpoints principales
 
