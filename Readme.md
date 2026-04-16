@@ -1,10 +1,10 @@
-# TFG – Agente RAG para la asistencia inteligente en la resolución de incidencias
+# TFG – Agente RAG para la asistencia inteligente en resolución de incidencias
 
-Este proyecto implementa un sistema RAG (Retrieval‑Augmented Generation) orientado a la asistencia técnica en la resolución de incidencias en entornos de Data e Inteligencia Artificial.
+Este proyecto implementa un sistema RAG (Retrieval-Augmented Generation) orientado a la asistencia técnica en la resolución de incidencias en entornos de Data e Inteligencia Artificial.
 
-El sistema combina búsqueda semántica sobre tickets y documentación técnica, modelos de lenguaje locales mediante Ollama y una evaluación opcional de la calidad de las respuestas utilizando métricas RAGAS.
+El sistema combina búsqueda semántica sobre tickets y documentación técnica, modelos de lenguaje locales mediante Ollama y una evaluación opcional de la calidad de las respuestas mediante métricas RAGAS.
 
-El proyecto tiene un enfoque académico y demostrativo, priorizando la claridad arquitectónica, la reproducibilidad y la facilidad de análisis.
+El proyecto tiene un enfoque académico y demostrativo, priorizando claridad arquitectónica, reproducibilidad y facilidad de análisis.
 
 ---
 
@@ -19,7 +19,7 @@ El flujo principal del sistema es el siguiente:
 5. Generación de una respuesta mediante un modelo de lenguaje local.
 6. Evaluación opcional de la respuesta utilizando métricas RAGAS.
 
-La evaluación se ejecuta de forma desacoplada del flujo principal para evitar introducir latencia innecesaria durante la interacción con el usuario.
+La evaluación se ejecuta de forma desacoplada del flujo principal para evitar introducir latencia en la interacción con el usuario.
 
 ---
 
@@ -40,7 +40,7 @@ La interfaz se sirve directamente desde la API FastAPI y está orientada a la de
 
 ## Estructura del proyecto
 
-TFG‑RAG‑AGENT/
+TFG-RAG-AGENT/
 ├── data/
 │   ├── tickets/           # Tickets ficticios en formato JSON
 │   ├── confluence/        # Documentación técnica ficticia
@@ -54,11 +54,11 @@ TFG‑RAG‑AGENT/
 ├── run_api.py
 └── README.md
 
-Nota: el directorio chroma_db/ se genera automáticamente y no se incluye en el repositorio.
+Nota: El directorio chroma_db/ se genera automáticamente y no se incluye en el repositorio.
 
 ---
 
-## Ejecución del proyecto (entorno local)
+## Ejecución del proyecto (local)
 
 ### 1. Crear entorno virtual
 
@@ -84,21 +84,13 @@ pip install -r requirements.txt
 
 python -m app.ingest.create_embeddings
 
-Este proceso carga los datos del corpus y persiste la base vectorial local en ChromaDB.
+Este proceso carga los datos y persiste la base vectorial local en ChromaDB.
 
 ---
 
-## Configuración del modelo de lenguaje (Ollama)
+### 4. Configuración del modelo de lenguaje (Ollama)
 
-El sistema utiliza **Ollama** para ejecutar modelos de lenguaje de forma local, evitando el uso de servicios externos.
-
-### Instalación de Ollama
-
-Ollama debe instalarse previamente desde su sitio oficial:
-
-https://ollama.com/
-
-Comprobación de la instalación:
+El sistema utiliza **Ollama** para ejecutar modelos de lenguaje de forma local, evitando el uso de servicios externos.### Instalación de OllamaOllama debe instalarse previamente desde su página oficial:https://ollama.com/Una vez instalado, verificar la instalación ejecutando:
 
 ollama --version
 
@@ -106,22 +98,22 @@ ollama --version
 
 ### Arranque del servicio Ollama
 
-Antes de ejecutar la aplicación es necesario iniciar el servicio local:
+Antes de ejecutar la aplicación, es necesario iniciar el servidor local de Ollama:
 
 ollama serve
 
-Este proceso debe permanecer activo mientras se utiliza el sistema RAG.
+Este proceso debe mantenerse activo mientras se utiliza el sistema RAG.
 
 ---
 
 ### Descarga de los modelos utilizados
 
-El proyecto ha sido probado principalmente con los siguientes modelos:
+El proyecto ha sido probado con los siguientes modelos:
 
 ollama pull qwen2.5
 ollama pull mistral
 
-Los modelos disponibles pueden consultarse con:
+Puede comprobarse que los modelos están disponibles con:
 
 ollama list
 
@@ -129,11 +121,12 @@ ollama list
 
 ### Selección del modelo
 
-El modelo de lenguaje se selecciona dinámicamente desde la interfaz web o mediante los parámetros de la API. Durante el desarrollo se han priorizado modelos ligeros, adecuados para ejecución local y evaluación académica.
+El modelo de lenguaje se selecciona dinámicamente desde la interfaz web o mediante el parámetro correspondiente en la API.
 
----
+Durante el desarrollo y la evaluación se han utilizado principalmente modelos **ligeros**, adecuados para ejecución local y demostraciones académicas.
 
-## Ejecutar la aplicación
+
+### 5. Ejecutar la aplicación
 
 python run_api.py
 
@@ -145,13 +138,16 @@ La aplicación estará disponible en:
 
 ---
 
+
+
 ## Endpoints principales
 
 ### POST /query
 
 Realiza una consulta RAG completa:
-- recupera tickets y documentos relevantes,
-- genera una respuesta utilizando un modelo de lenguaje local.
+
+- Recupera tickets y documentos relevantes.
+- Genera una respuesta usando un modelo de lenguaje local.
 
 Ejemplo de entrada:
 
@@ -164,7 +160,9 @@ Ejemplo de entrada:
 
 ### POST /evaluate (opcional)
 
-Evalúa la calidad de una respuesta utilizando métricas RAGAS. Este endpoint está pensado únicamente para análisis y demostración, no para uso interactivo por defecto.
+Evalúa la calidad de una respuesta utilizando métricas RAGAS.
+
+Este endpoint está pensado únicamente para análisis y demostración, no para uso interactivo por defecto.
 
 Métricas calculadas:
 - Faithfulness
@@ -172,17 +170,40 @@ Métricas calculadas:
 
 ---
 
+## Documentación de la API (Swagger)
+
+El proyecto expone documentación interactiva de la API mediante **Swagger**, lo que permite explorar y probar los endpoints directamente desde el navegador.
+
+Una vez ejecutada la aplicación, la documentación está disponible en:
+
+- **Swagger UI**: http://localhost:8000/docs  
+- **Especificación OpenAPI (JSON)**: http://localhost:8000/openapi.json
+
+Swagger se utiliza como herramienta de apoyo para la validación y demostración del funcionamiento de la API durante el desarrollo y la evaluación académica.
+
+
 ## Dataset artificial
 
-El sistema utiliza un conjunto de datos **artificiales** (tickets y documentos técnicos) generados con fines académicos.
+El sistema utiliza un conjunto de **datos artificiales** (tickets y documentos técnicos) generados con fines académicos.
 
-Estos datos no contienen información real ni sensible y se emplean exclusivamente para demostrar el funcionamiento del sistema RAG. En el repositorio se incluyen únicamente ejemplos representativos, mientras que el conjunto completo puede generarse automáticamente mediante los scripts de ingesta.
+Estos datos:
+- no contienen información real ni sensible,
+- simulan incidencias y documentación habitual en entornos de Data e Inteligencia Artificial,
+- se utilizan exclusivamente para demostrar el funcionamiento del sistema RAG.
 
----
+En el repositorio se incluyen únicamente **ejemplos representativos**, mientras que el conjunto completo puede generarse automáticamente mediante los scripts de ingesta.
+
 
 ## Interpretación de las métricas RAGAS
 
-Las métricas se calculan en un escenario sin respuestas de referencia (ground truth) y utilizando modelos de lenguaje ligeros. En este contexto, valores bajos de métricas son esperables y no indican un fallo del sistema, sino un estilo de generación inferencial frente a uno extractivo.
+Las métricas se calculan en un escenario sin respuestas de referencia (ground truth) y utilizando modelos de lenguaje ligeros.
+
+En este contexto:
+- Valores bajos de métricas son esperables.
+- Se penaliza la inferencia implícita frente al uso literal del contexto.
+- Métricas bajas no indican un fallo del sistema.
+
+El sistema prioriza respuestas útiles y prácticas frente a respuestas estrictamente extractivas.
 
 ---
 
